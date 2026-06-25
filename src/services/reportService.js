@@ -3,9 +3,18 @@ export const getDailyReport = (date) => api.get('/report/daily', { params: { dat
 export const getWeeklyReport = () => api.get('/report/weekly');
 export const getMonthlyReport = (year, month) => api.get('/report/monthly', { params: { year, month } });
 export const getChartData = () => api.get('/report/chart');
-export const exportReport = (type, params = {}) => {
-  const token = localStorage.getItem('hf_token');
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-  const queryParams = new URLSearchParams({ type, ...params }).toString();
-  window.open(`${baseUrl}/report/export?${queryParams}`, '_blank');
+export const exportReport = async (type, params = {}) => {
+  const response = await api.get('/report/export', {
+    params: { type, ...params },
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${type}_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };

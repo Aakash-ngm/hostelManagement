@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiLogOut, FiLogIn, FiClock, FiCalendar, FiArrowLeft, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
@@ -6,14 +6,13 @@ import toast from 'react-hot-toast';
 import RegisterSearch from '../components/movement/RegisterSearch';
 import StudentCard from '../components/movement/StudentCard';
 import { recordOut, recordIn } from '../services/movementService';
-import { grantPermission } from '../services/permissionService';
+import { grantPermission, grantStaffPermission } from '../services/permissionService';
 import { applyLeave } from '../services/leaveService';
 
 const MOVEMENT_TYPES = [
   { value: 'EveningOuting', label: '🌆 Evening Outing', desc: '4:30 PM – 6:30 PM', color: 'border-orange-500/30 bg-orange-500/10' },
-  { value: 'DinnerBreak', label: '🍽 Dinner Break', desc: '8:00 PM – 9:00 PM', color: 'border-pink-500/30 bg-pink-500/10' },
-  { value: 'RegularOuting', label: '🚶 Regular Outing', desc: 'General outing with reason', color: 'border-cyan-500/30 bg-cyan-500/10' },
-  { value: 'Permission', label: '🕐 Permission', desc: 'Until a specified time', color: 'border-blue-500/30 bg-blue-500/10' },
+  { value: 'DinnerBreak', label: '🍽 Dinner Outing', desc: '8:00 PM – 9:00 PM', color: 'border-pink-500/30 bg-pink-500/10' },
+  { value: 'StaffPermission', label: '👤 Staff Permission', desc: 'Approved by staff member', color: 'border-blue-500/30 bg-blue-500/10' },
   { value: 'NativeLeave', label: '🏠 Native Leave', desc: 'Multi-day home leave', color: 'border-purple-500/30 bg-purple-500/10' },
 ];
 
@@ -29,6 +28,18 @@ const StudentMovement = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
+  // New States
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [staffName, setStaffName] = useState('');
+  const [permissionDate, setPermissionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [fromTime, setFromTime] = useState('');
+  const [toTime, setToTime] = useState('');
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const resetForm = () => {
     setStudent(null);
     setMovementType('');
@@ -36,14 +47,51 @@ const StudentMovement = () => {
     setPermissionUntil('');
     setFromDate('');
     setToDate('');
+    setStaffName('');
+    setPermissionDate(new Date().toISOString().split('T')[0]);
+    setFromTime('');
+    setToTime('');
     setResult(null);
+  };
+
+  const checkOutingValid = (type) => {
+    const hours = currentTime.getHours();
+    const minutes = currentTime.getMinutes();
+    const totalMinutes = hours * 60 + minutes;
+
+    if (type === 'EveningOuting') {
+      const start = 16 * 60 + 30; // 4:30 PM
+      const end = 18 * 60 + 30;   // 6:30 PM
+      return totalMinutes >= start && totalMinutes <= end;
+    }
+    if (type === 'DinnerBreak') {
+      const start = 20 * 60; // 8:00 PM
+      const end = 21 * 60;   // 9:00 PM
+      return totalMinutes >= start && totalMinutes <= end;
+    }
+    return true;
   };
 
   const handleOut = async () => {
     if (!student) return toast.error('Search for a student first');
     if (!movementType) return toast.error('Select movement type');
+
+    if (movementType === 'EveningOuting' && !checkOutingValid('EveningOuting')) {
+      return toast.error('Evening Outing is only allowed between 04:30 PM and 06:30 PM.');
+    }
+    if (movementType === 'DinnerBreak' && !checkOutingValid('DinnerBreak')) {
+      return toast.error('Dinner Outing is only allowed between 08:00 PM and 09:00 PM.');
+    }
+
     if (movementType === 'Permission' && !permissionUntil) return toast.error('Select permission until time');
     if (movementType === 'NativeLeave' && (!fromDate || !toDate)) return toast.error('Select leave dates');
+    if (movementType === 'StaffPermission') {
+      if (!staffName) return toast.error('Enter authorized staff name');
+      if (!reason) return toast.error('Enter reason');
+      if (!permissionDate) return toast.error('Select permission date');
+      if (!fromTime) return toast.error('Select from time');
+      if (!toTime) return toast.error('Select to time');
+    }
 
     setLoading(true);
     try {
@@ -63,6 +111,15 @@ const StudentMovement = () => {
           fromDate,
           toDate,
           reason: reason || 'Native leave',
+        });
+      } else if (movementType === 'StaffPermission') {
+        res = await grantStaffPermission({
+          registerNumber: student.registerNumber,
+          permissionDate,
+          fromTime,
+          toTime,
+          staffName,
+          reason,
         });
       } else {
         res = await recordOut({
@@ -106,7 +163,7 @@ const StudentMovement = () => {
         </Link>
         <div className="text-center">
           <h1 className="text-xl font-bold text-white">Attendance Portal</h1>
-          <p className="text-xs text-gray-500">{new Date().toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}</p>
+          <p className="text-xs text-gray-400 font-medium">{currentTime.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'medium' })}</p>
         </div>
         <Link to="/warden/login" className="text-xs text-blue-400 hover:text-blue-300">Warden →</Link>
       </div>
@@ -145,25 +202,41 @@ const StudentMovement = () => {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-5 space-y-4">
                 <h2 className="text-sm font-semibold text-gray-300">Step 2 — Select Movement Type</h2>
                 <div className="grid grid-cols-1 gap-2">
-                  {MOVEMENT_TYPES.map(({ value, label, desc, color }) => (
-                    <button
-                      key={value}
-                      onClick={() => setMovementType(value)}
-                      className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left ${
-                        movementType === value ? color : 'border-gray-700/50 bg-gray-800/40 hover:border-gray-600/50'
-                      }`}
-                    >
-                      <div className="flex-1">
-                        <p className="text-white text-sm font-semibold">{label}</p>
-                        <p className="text-gray-400 text-xs">{desc}</p>
-                      </div>
-                      {movementType === value && <FiCheckCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />}
-                    </button>
-                  ))}
+                  {MOVEMENT_TYPES.map(({ value, label, desc, color }) => {
+                    const isValid = checkOutingValid(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => {
+                          if (isValid) {
+                            setMovementType(value);
+                          } else {
+                            toast.error(`${label} is only allowed during its scheduled hours: ${desc}`);
+                          }
+                        }}
+                        className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left ${
+                          !isValid
+                            ? 'opacity-45 cursor-not-allowed border-gray-800/80 bg-gray-900/40 text-gray-500'
+                            : movementType === value
+                            ? color
+                            : 'border-gray-700/50 bg-gray-800/40 hover:border-gray-600/50'
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <p className={`text-sm font-semibold ${!isValid ? 'text-gray-500' : 'text-white'}`}>
+                            {label} {!isValid && <span className="text-xs text-red-500 font-normal ml-1">(Closed)</span>}
+                          </p>
+                          <p className="text-gray-400 text-xs">{desc}</p>
+                        </div>
+                        {isValid && movementType === value && <FiCheckCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Extra fields based on type */}
-                {movementType && movementType !== 'EveningOuting' && movementType !== 'DinnerBreak' && (
+                {movementType && movementType !== 'EveningOuting' && movementType !== 'DinnerBreak' && movementType !== 'StaffPermission' && (
                   <div>
                     <label className="form-label">Reason</label>
                     <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Enter reason..." className="input-field" />
@@ -176,9 +249,68 @@ const StudentMovement = () => {
                   </div>
                 )}
                 {movementType === 'NativeLeave' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><label className="form-label">From Date</label><input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="input-field" /></div>
-                    <div><label className="form-label">To Date</label><input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="input-field" /></div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="form-label">Reason</label>
+                      <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Enter reason..." className="input-field" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><label className="form-label">From Date</label><input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="input-field" /></div>
+                      <div><label className="form-label">To Date</label><input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="input-field" /></div>
+                    </div>
+                  </div>
+                )}
+                {movementType === 'StaffPermission' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="form-label">Staff Name</label>
+                      <input
+                        type="text"
+                        value={staffName}
+                        onChange={e => setStaffName(e.target.value)}
+                        placeholder="Enter authorized staff name..."
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Reason</label>
+                      <input
+                        type="text"
+                        value={reason}
+                        onChange={e => setReason(e.target.value)}
+                        placeholder="Enter reason..."
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Permission Date</label>
+                      <input
+                        type="date"
+                        value={permissionDate}
+                        onChange={e => setPermissionDate(e.target.value)}
+                        className="input-field"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="form-label">From Time</label>
+                        <input
+                          type="time"
+                          value={fromTime}
+                          onChange={e => setFromTime(e.target.value)}
+                          className="input-field"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label">To Time</label>
+                        <input
+                          type="time"
+                          value={toTime}
+                          onChange={e => setToTime(e.target.value)}
+                          className="input-field"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 

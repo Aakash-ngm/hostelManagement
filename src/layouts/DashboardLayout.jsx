@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getNotifications } from '../services/notificationService';
 
 const navItems = [
   { to: '/warden/dashboard', icon: FiGrid, label: 'Dashboard' },
@@ -21,9 +22,25 @@ const navItems = [
 
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await getNotifications({ limit: 1 });
+        setUnreadCount(res.data.data.unreadCount || 0);
+      } catch (err) {
+        console.error('Failed to fetch unread count:', err);
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -135,6 +152,18 @@ const DashboardLayout = ({ children }) => {
             <p className="text-sm text-gray-400">Welcome back, <span className="text-white font-semibold">{user?.name}</span></p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => navigate('/warden/notifications')}
+              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all relative flex items-center justify-center"
+              title="Notifications"
+            >
+              <FiBell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded-full min-w-[16px] h-[16px] flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
