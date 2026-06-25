@@ -1,0 +1,10 @@
+import api from './api';
+export const getDashboardStats = () => api.get('/warden/dashboard');
+export const getAllStudents = (params) => api.get('/warden/students', { params });
+export const getStudentById = (id) => api.get(`/warden/students/${id}`);
+export const addStudent = (data) => api.post('/warden/students', data);
+export const updateStudent = (id, data) => api.put(`/warden/students/${id}`, data);
+export const deleteStudent = (id) => api.delete(`/warden/students/${id}`);
+export const getLiveStatus = () => api.get('/warden/live-status');
+export const getLateStudents = () => api.get('/warden/late-today');
+export const getCurrentlyOutside = () => api.get('/warden/currently-outside');

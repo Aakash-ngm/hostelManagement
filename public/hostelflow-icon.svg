@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Shield background -->
+  <path d="M32 4L8 14V32C8 45.3 18.8 57.4 32 60C45.2 57.4 56 45.3 56 32V14L32 4Z" fill="url(#shieldGrad)" opacity="0.95"/>
+  <!-- Hostel building -->
+  <rect x="20" y="28" width="24" height="20" rx="1" fill="white" opacity="0.15"/>
+  <path d="M18 30L32 20L46 30" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+  <!-- Door -->
+  <rect x="28" y="36" width="8" height="12" rx="1" fill="white" opacity="0.5"/>
+  <!-- Windows -->
+  <rect x="21" y="32" width="5" height="4" rx="0.5" fill="white" opacity="0.7"/>
+  <rect x="38" y="32" width="5" height="4" rx="0.5" fill="white" opacity="0.7"/>
+  <!-- Check mark badge -->
+  <circle cx="46" cy="18" r="8" fill="#10b981"/>
+  <path d="M42 18L45 21L50 15" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  <!-- Student silhouette -->
+  <circle cx="32" cy="14" r="2.5" fill="white" opacity="0.9"/>
+  <defs>
+    <linearGradient id="shieldGrad" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#1d4ed8"/>
+      <stop offset="100%" stopColor="#4f46e5"/>
+    </linearGradient>
+  </defs>
+</svg>
