@@ -83,18 +83,18 @@ const StudentManagement = () => {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-white">Student Management</h1>
             <p className="text-sm text-gray-400 mt-0.5">{total} students registered</p>
           </div>
-          <button onClick={openAdd} className="btn-primary flex items-center gap-2">
+          <button onClick={openAdd} className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto">
             <FiPlus className="w-4 h-4" /> Add Student
           </button>
         </div>
 
         {/* Search */}
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -104,8 +104,10 @@ const StudentManagement = () => {
               className="w-full pl-9 pr-4 py-3 input-field"
             />
           </div>
-          <button type="submit" className="btn-primary px-5">Search</button>
-          {search && <button type="button" onClick={() => { setSearch(''); fetchStudents(1, ''); }} className="btn-secondary px-4"><FiX className="w-4 h-4" /></button>}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button type="submit" className="btn-primary flex-1 sm:flex-none px-5">Search</button>
+            {search && <button type="button" onClick={() => { setSearch(''); fetchStudents(1, ''); }} className="btn-secondary px-4"><FiX className="w-4 h-4" /></button>}
+          </div>
         </form>
 
         {/* Table */}
@@ -190,19 +192,19 @@ const StudentManagement = () => {
                 <h2 className="text-lg font-bold text-white">{editStudent ? 'Edit Student' : 'Add New Student'}</h2>
                 <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white"><FiX className="w-5 h-5" /></button>
               </div>
-              <form onSubmit={handleSave} className="grid grid-cols-2 gap-4">
-                <div className="col-span-2"><label className="form-label">Full Name</label><input required value={form.name} onChange={set('name')} placeholder="Arjun Kumar" className="input-field" /></div>
+              <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-1 sm:col-span-2"><label className="form-label">Full Name</label><input required value={form.name} onChange={set('name')} placeholder="Arjun Kumar" className="input-field" /></div>
                 <div><label className="form-label">Register Number</label><input required value={form.registerNumber} onChange={e => setForm(p => ({ ...p, registerNumber: e.target.value.toUpperCase() }))} placeholder="CS2021001" className="input-field font-mono uppercase" disabled={!!editStudent} /></div>
                 <div><label className="form-label">Room Number</label><input required value={form.roomNumber} onChange={set('roomNumber')} placeholder="A-101" className="input-field" /></div>
-                <div className="col-span-2"><label className="form-label">Email</label><input type="email" required value={form.email} onChange={set('email')} placeholder="student@college.edu.in" className="input-field" /></div>
+                <div className="col-span-1 sm:col-span-2"><label className="form-label">Email</label><input type="email" required value={form.email} onChange={set('email')} placeholder="student@college.edu.in" className="input-field" /></div>
                 <div><label className="form-label">Department</label><select required value={form.department} onChange={set('department')} className="input-field">{DEPTS.map(d => <option key={d}>{d}</option>)}</select></div>
                 <div><label className="form-label">Year</label><select required value={form.year} onChange={set('year')} className="input-field">{YEARS.map(y => <option key={y}>{y}</option>)}</select></div>
                 <div><label className="form-label">Student Phone</label><input type="tel" required value={form.studentPhone} onChange={set('studentPhone')} maxLength={10} placeholder="9876543210" className="input-field" /></div>
                 <div><label className="form-label">Parent Phone</label><input type="tel" required value={form.parentPhone} onChange={set('parentPhone')} maxLength={10} placeholder="9876543210" className="input-field" /></div>
-                {!editStudent && <div className="col-span-2"><label className="form-label">Default Password</label><input value={form.password} onChange={set('password')} placeholder="Student@123" className="input-field" /></div>}
-                <div className="col-span-2 flex gap-3 mt-2">
-                  <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">Cancel</button>
-                  <button type="submit" disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                {!editStudent && <div className="col-span-1 sm:col-span-2"><label className="form-label">Default Password</label><input value={form.password} onChange={set('password')} placeholder="Student@123" className="input-field" /></div>}
+                <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row gap-3 mt-2">
+                  <button type="button" onClick={() => setShowModal(false)} className="btn-secondary w-full sm:flex-1">Cancel</button>
+                  <button type="submit" disabled={saving} className="btn-primary w-full sm:flex-1 flex items-center justify-center gap-2">
                     {saving ? <FiLoader className="animate-spin w-4 h-4" /> : null}
                     {saving ? 'Saving...' : editStudent ? 'Update Student' : 'Add Student'}
                   </button>

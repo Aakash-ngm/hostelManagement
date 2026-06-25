@@ -59,13 +59,13 @@ const ReportsPage = () => {
         </div>
 
         {/* Tab + Filters */}
-        <div className="glass-card p-4 flex flex-wrap gap-4 items-center">
-          <div className="flex gap-1.5">
+        <div className="glass-card p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 md:pb-0">
             {TABS.map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex-1 md:flex-initial text-center ${
                   tab === t ? 'bg-blue-600 text-white' : 'bg-gray-800/60 text-gray-400 hover:text-white border border-gray-700/50'
                 }`}
               >
@@ -73,21 +73,21 @@ const ReportsPage = () => {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-3 w-full md:w-auto md:ml-auto justify-end">
             {tab === 'Daily' && (
-              <div className="flex items-center gap-2">
-                <FiCalendar className="text-gray-400 w-4 h-4" />
-                <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input-field py-2 w-auto" />
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <FiCalendar className="text-gray-400 w-4 h-4 flex-shrink-0" />
+                <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input-field py-2 w-full md:w-auto" />
               </div>
             )}
             {tab === 'Monthly' && (
-              <div className="flex items-center gap-2">
-                <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="input-field py-2 w-auto">
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="input-field py-2 flex-1 md:w-auto">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                     <option key={m} value={m}>{new Date(2024, m - 1).toLocaleString('en-IN', { month: 'long' })}</option>
                   ))}
                 </select>
-                <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="input-field py-2 w-auto">
+                <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="input-field py-2 flex-1 md:w-auto">
                   {[2024, 2025, 2026].map(y => <option key={y}>{y}</option>)}
                 </select>
               </div>

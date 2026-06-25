@@ -26,29 +26,29 @@ const LandingPage = () => {
       </div>
 
       {/* Nav */}
-      <nav className="relative z-10 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+      <nav className="relative z-10 flex flex-wrap sm:flex-nowrap items-center justify-between px-4 sm:px-6 py-4 max-w-7xl mx-auto gap-4">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3"
+          className="flex items-center gap-2.5"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-900/40">
-            <FiShield className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-900/40">
+            <FiShield className="w-4 h-4 text-white" />
           </div>
-          <span className="text-xl font-bold">HostelFlow</span>
+          <span className="text-lg font-bold">HostelFlow</span>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3"
+          className="flex items-center gap-2 sm:gap-3"
         >
           <button onClick={toggleTheme} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all">
             {isDark ? <FiSun className="w-4 h-4" /> : <FiMoon className="w-4 h-4" />}
           </button>
-          <Link to="/student/login" className="text-sm text-gray-300 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-gray-800">
+          <Link to="/student/login" className="text-xs sm:text-sm text-gray-300 hover:text-white transition-colors px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-gray-800">
             Student Login
           </Link>
-          <Link to="/warden/login" className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl transition-colors">
+          <Link to="/warden/login" className="text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-colors">
             Warden Portal
           </Link>
         </motion.div>

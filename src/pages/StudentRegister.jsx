@@ -40,8 +40,8 @@ const StudentRegister = () => {
   return (
     <AuthLayout title="Student Registration" subtitle="Register to track your attendance and movements">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="col-span-1 sm:col-span-2">
             <label className="form-label">Full Name</label>
             <input required value={form.name} onChange={set('name')} placeholder="Arjun Kumar" className="input-field" />
           </div>
@@ -53,20 +53,20 @@ const StudentRegister = () => {
             <label className="form-label">Room Number</label>
             <input required value={form.roomNumber} onChange={set('roomNumber')} placeholder="A-101" className="input-field uppercase" />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-1 sm:col-span-2">
             <label className="form-label">Email</label>
             <input type="email" required value={form.email} onChange={set('email')} placeholder="student@college.edu.in" className="input-field" />
           </div>
           <div>
             <label className="form-label">Department</label>
             <select required value={form.department} onChange={set('department')} className="input-field">
-              {DEPTS.map(d => <option key={d} value={d}>{d}</option>)}
+               {DEPTS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <div>
             <label className="form-label">Year</label>
             <select required value={form.year} onChange={set('year')} className="input-field">
-              {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+               {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
           <div>
@@ -77,7 +77,7 @@ const StudentRegister = () => {
             <label className="form-label">Parent Phone</label>
             <input type="tel" required value={form.parentPhone} onChange={set('parentPhone')} placeholder="9876543210" maxLength={10} className="input-field" />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-1 sm:col-span-2">
             <label className="form-label">Password</label>
             <input type="password" required value={form.password} onChange={set('password')} placeholder="Min. 6 characters" className="input-field" />
           </div>

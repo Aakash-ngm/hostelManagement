@@ -52,7 +52,7 @@ const NotificationsPage = () => {
   return (
     <DashboardLayout>
       <div className="max-w-3xl mx-auto space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <FiBell className="w-6 h-6 text-blue-400" /> Notifications
@@ -62,13 +62,13 @@ const NotificationsPage = () => {
             </h1>
             <p className="text-sm text-gray-400 mt-0.5">Hostel alerts and student notifications</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {unreadCount > 0 && (
-              <button onClick={handleMarkAll} className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5">
+              <button onClick={handleMarkAll} className="btn-secondary text-xs px-3 py-2 flex items-center justify-center gap-1.5 flex-1 sm:flex-none">
                 <FiCheckCircle className="w-3.5 h-3.5" /> Mark all read
               </button>
             )}
-            <button onClick={handleClear} className="btn-danger text-xs px-3 py-2 flex items-center gap-1.5">
+            <button onClick={handleClear} className="btn-danger text-xs px-3 py-2 flex items-center justify-center gap-1.5 flex-1 sm:flex-none">
               <FiTrash2 className="w-3.5 h-3.5" /> Clear read
             </button>
           </div>
