@@ -45,11 +45,14 @@ const LandingPage = () => {
           <button onClick={toggleTheme} className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all">
             {isDark ? <FiSun className="w-4 h-4" /> : <FiMoon className="w-4 h-4" />}
           </button>
-          <Link to="/student/login" className="text-xs sm:text-sm text-gray-300 hover:text-white transition-colors px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-gray-800">
+          <Link to="/student/login" className="text-xs sm:text-sm text-emerald-400 hover:text-emerald-300 font-semibold px-3 py-1.5 rounded-lg">
             Student Login
           </Link>
-          <Link to="/warden/login" className="text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-colors">
-            Warden Portal
+          <Link to="/warden/login" className="text-xs sm:text-sm text-blue-400 hover:text-blue-300 font-semibold px-3 py-1.5 rounded-lg">
+            Warden Login
+          </Link>
+          <Link to="/gate/login" className="text-xs sm:text-sm font-semibold text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-xl transition-colors">
+            Gate Login
           </Link>
         </motion.div>
       </nav>
@@ -76,22 +79,31 @@ const LandingPage = () => {
             Replace manual register entries with a fully digital hostel attendance and student movement tracking system. Built for Indian engineering college hostels.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/movement">
+            <Link to="/student/login">
               <motion.button
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-blue-900/30 text-base transition-all"
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl shadow-xl shadow-emerald-950/20 text-base transition-all"
               >
-                Mark Attendance <FiArrowRight className="w-5 h-5" />
+                Student Portal <FiArrowRight className="w-5 h-5" />
               </motion.button>
             </Link>
             <Link to="/warden/login">
               <motion.button
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-blue-900/30 text-base transition-all"
+              >
+                Warden Portal <FiArrowRight className="w-5 h-5" />
+              </motion.button>
+            </Link>
+            <Link to="/gate/login">
+              <motion.button
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.97 }}
                 className="flex items-center gap-2 px-8 py-4 bg-gray-800/80 hover:bg-gray-700/80 border border-gray-700 text-white font-semibold rounded-2xl text-base transition-all"
               >
-                <FiShield className="w-5 h-5" /> Warden Dashboard
+                <FiShield className="w-5 h-5" /> Gate Terminal
               </motion.button>
             </Link>
           </div>

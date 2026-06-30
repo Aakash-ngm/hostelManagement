@@ -1,46 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FiGrid, FiUsers, FiClipboard, FiLogOut, FiMenu, FiX,
-  FiSun, FiMoon, FiBell, FiChevronRight, FiShield,
-  FiFileText, FiHome, FiClock, FiCalendar
+  FiGrid, FiClock, FiCalendar, FiAlertTriangle,
+  FiBookOpen, FiFileText, FiUser, FiLogOut, FiMenu, FiX,
+  FiSun, FiMoon, FiShield
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { getNotifications } from '../services/notificationService';
 
-const navItems = [
-  { to: '/warden/dashboard', icon: FiGrid, label: 'Dashboard' },
-  { to: '/warden/students', icon: FiUsers, label: 'Students' },
-  { to: '/warden/live-status', icon: FiHome, label: 'Live Status' },
-  { to: '/warden/reports', icon: FiFileText, label: 'Reports' },
-  { to: '/warden/permissions', icon: FiClock, label: 'Permissions' },
-  { to: '/warden/leaves', icon: FiCalendar, label: 'Native Leaves' },
-  { to: '/warden/notifications', icon: FiBell, label: 'Notifications' },
+const studentNavItems = [
+  { to: '/student/dashboard', icon: FiGrid, label: 'Dashboard' },
+  { to: '/student/request-staff', icon: FiClock, label: 'Staff Permission' },
+  { to: '/student/request-leave', icon: FiCalendar, label: 'Native Leave' },
+  { to: '/student/emergency', icon: FiAlertTriangle, label: 'Emergency' },
+  { to: '/student/attendance', icon: FiBookOpen, label: 'My Attendance' },
+  { to: '/student/reports', icon: FiFileText, label: 'My Reports' },
+  { to: '/student/profile', icon: FiUser, label: 'Profile' },
 ];
 
-const DashboardLayout = ({ children }) => {
+const StudentDashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const res = await getNotifications({ limit: 1 });
-        setUnreadCount(res.data.data.unreadCount || 0);
-      } catch (err) {
-        console.error('Failed to fetch unread count:', err);
-      }
-    };
-
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleLogout = () => {
     logout();
@@ -51,47 +34,42 @@ const DashboardLayout = ({ children }) => {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-gray-800/50">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg flex-shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg flex-shrink-0">
           <FiShield className="w-5 h-5 text-white" />
         </div>
         <div>
           <p className="text-white font-bold text-sm">HostelFlow</p>
-          <p className="text-blue-400 text-xs">Warden Portal</p>
+          <p className="text-emerald-400 text-xs">Student Portal</p>
         </div>
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {studentNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) =>
               isActive
-                ? 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600/20 border border-blue-500/20'
+                ? 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-emerald-600/20 border border-emerald-500/20'
                 : 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/60 transition-all'
             }
           >
             <Icon className="w-4 h-4 flex-shrink-0" />
             <span className="flex-1">{label}</span>
-            {label === 'Notifications' && unreadCount > 0 && (
-              <span className="px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full flex items-center justify-center min-w-[20px] h-[20px]">
-                {unreadCount}
-              </span>
-            )}
           </NavLink>
         ))}
       </nav>
 
-      {/* User footer */}
+      {/* Student footer */}
       <div className="p-3 border-t border-gray-800/50">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-800/40 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {user?.name?.charAt(0) || 'W'}
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {user?.name?.charAt(0) || 'S'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-xs font-semibold truncate">{user?.name}</p>
-            <p className="text-gray-500 text-xs truncate">{user?.email}</p>
+            <p className="text-gray-500 text-[10.5px] truncate font-mono">{user?.registerNumber}</p>
           </div>
         </div>
         <button
@@ -153,21 +131,9 @@ const DashboardLayout = ({ children }) => {
             <FiMenu className="w-5 h-5" />
           </button>
           <div className="hidden lg:block">
-            <p className="text-sm text-gray-400">Welcome back, <span className="text-white font-semibold">{user?.name}</span></p>
+            <p className="text-sm text-gray-400">Welcome, Student <span className="text-white font-semibold">{user?.name}</span></p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={() => navigate('/warden/notifications')}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all relative flex items-center justify-center"
-              title="Notifications"
-            >
-              <FiBell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded-full min-w-[16px] h-[16px] flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
@@ -193,4 +159,4 @@ const DashboardLayout = ({ children }) => {
   );
 };
 
-export default DashboardLayout;
+export default StudentDashboardLayout;

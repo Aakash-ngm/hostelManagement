@@ -20,6 +20,16 @@ import PermissionsPage from './pages/PermissionsPage';
 import LeavesPage from './pages/LeavesPage';
 import NotificationsPage from './pages/NotificationsPage';
 
+// Portal Enhancement Pages
+import GateLogin from './pages/GateLogin';
+import StudentDashboard from './pages/StudentDashboard';
+import StudentStaffRequest from './pages/StudentStaffRequest';
+import StudentLeaveRequest from './pages/StudentLeaveRequest';
+import StudentEmergency from './pages/StudentEmergency';
+import StudentAttendance from './pages/StudentAttendance';
+import StudentReports from './pages/StudentReports';
+import StudentProfile from './pages/StudentProfile';
+
 function App() {
   return (
     <BrowserRouter>
@@ -46,7 +56,13 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
-            <Route path="/movement" element={<StudentMovement />} />
+            
+            {/* Gate Portal */}
+            <Route path="/gate/login" element={<GateLogin />} />
+            <Route path="/gate/entry" element={
+              <ProtectedWardenRoute><StudentMovement /></ProtectedWardenRoute>
+            } />
+            <Route path="/movement" element={<Navigate to="/gate/entry" replace />} />
 
             {/* Warden auth */}
             <Route path="/warden/login" element={<WardenLogin />} />
@@ -56,10 +72,29 @@ function App() {
             <Route path="/student/login" element={<StudentLogin />} />
             <Route path="/student/register" element={<StudentRegister />} />
 
-            {/* Protected student routes */}
-            <Route path="/student/history" element={
-              <ProtectedStudentRoute><StudentHistory /></ProtectedStudentRoute>
+            {/* Protected Student Portal routes */}
+            <Route path="/student/dashboard" element={
+              <ProtectedStudentRoute><StudentDashboard /></ProtectedStudentRoute>
             } />
+            <Route path="/student/request-staff" element={
+              <ProtectedStudentRoute><StudentStaffRequest /></ProtectedStudentRoute>
+            } />
+            <Route path="/student/request-leave" element={
+              <ProtectedStudentRoute><StudentLeaveRequest /></ProtectedStudentRoute>
+            } />
+            <Route path="/student/emergency" element={
+              <ProtectedStudentRoute><StudentEmergency /></ProtectedStudentRoute>
+            } />
+            <Route path="/student/attendance" element={
+              <ProtectedStudentRoute><StudentAttendance /></ProtectedStudentRoute>
+            } />
+            <Route path="/student/reports" element={
+              <ProtectedStudentRoute><StudentReports /></ProtectedStudentRoute>
+            } />
+            <Route path="/student/profile" element={
+              <ProtectedStudentRoute><StudentProfile /></ProtectedStudentRoute>
+            } />
+            <Route path="/student/history" element={<Navigate to="/student/dashboard" replace />} />
 
             {/* Protected warden routes */}
             <Route path="/warden/dashboard" element={

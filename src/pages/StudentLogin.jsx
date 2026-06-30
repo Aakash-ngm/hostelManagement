@@ -20,7 +20,7 @@ const StudentLogin = () => {
       const res = await studentLogin({ ...form, registerNumber: form.registerNumber.toUpperCase() });
       login(res.data.data.user, res.data.data.token);
       toast.success(`Welcome, ${res.data.data.user.name}!`);
-      navigate('/student/history');
+      navigate('/student/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
     } finally {

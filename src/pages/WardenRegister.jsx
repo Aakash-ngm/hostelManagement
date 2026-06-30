@@ -33,8 +33,19 @@ const WardenRegister = () => {
     <AuthLayout title="Warden Registration" subtitle="Create your warden account to manage the hostel">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="form-label">Full Name</label>
-          <input type="text" required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Dr. Rajesh Kumar" className="input-field" />
+          <label className="form-label">Select Warden Name</label>
+          <select
+            required
+            value={form.name}
+            onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+            className="input-field bg-gray-900 border border-gray-700/50 text-white rounded-xl w-full p-2.5"
+          >
+            <option value="">-- Choose Warden Name --</option>
+            <option value="sathish">Sathish</option>
+            <option value="vijayan">Vijayan</option>
+            <option value="kannan">Kannan</option>
+            <option value="arul">Arul</option>
+          </select>
         </div>
         <div>
           <label className="form-label">Email Address</label>

@@ -1,39 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiLogOut, FiLogIn, FiClock, FiCalendar, FiArrowLeft, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiLogOut, FiLogIn, FiClock, FiShield, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import RegisterSearch from '../components/movement/RegisterSearch';
 import StudentCard from '../components/movement/StudentCard';
 import { recordOut, recordIn } from '../services/movementService';
-import { grantPermission, grantStaffPermission } from '../services/permissionService';
-import { applyLeave } from '../services/leaveService';
-
-const MOVEMENT_TYPES = [
-  { value: 'EveningOuting', label: '🌆 Evening Outing', desc: '4:30 PM – 6:30 PM', color: 'border-orange-500/30 bg-orange-500/10' },
-  { value: 'DinnerBreak', label: '🍽 Dinner Outing', desc: '8:00 PM – 9:00 PM', color: 'border-pink-500/30 bg-pink-500/10' },
-  { value: 'StaffPermission', label: '👤 Staff Permission', desc: 'Approved by staff member', color: 'border-blue-500/30 bg-blue-500/10' },
-  { value: 'NativeLeave', label: '🏠 Native Leave', desc: 'Multi-day home leave', color: 'border-purple-500/30 bg-purple-500/10' },
-];
+import { useAuth } from '../context/AuthContext';
 
 const StudentMovement = () => {
   const [mode, setMode] = useState('out'); // 'out' | 'in'
   const [student, setStudent] = useState(null);
   const [inStudent, setInStudent] = useState(null);
-  const [movementType, setMovementType] = useState('');
-  const [reason, setReason] = useState('');
-  const [permissionUntil, setPermissionUntil] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-
-  // New States
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [staffName, setStaffName] = useState('');
-  const [permissionDate, setPermissionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [fromTime, setFromTime] = useState('');
-  const [toTime, setToTime] = useState('');
+
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -42,92 +26,86 @@ const StudentMovement = () => {
 
   const resetForm = () => {
     setStudent(null);
-    setMovementType('');
-    setReason('');
-    setPermissionUntil('');
-    setFromDate('');
-    setToDate('');
-    setStaffName('');
-    setPermissionDate(new Date().toISOString().split('T')[0]);
-    setFromTime('');
-    setToTime('');
+    setInStudent(null);
     setResult(null);
   };
 
-  const checkOutingValid = (type) => {
+  const checkScheduledOuting = () => {
     const hours = currentTime.getHours();
     const minutes = currentTime.getMinutes();
     const totalMinutes = hours * 60 + minutes;
 
-    if (type === 'EveningOuting') {
-      const start = 16 * 60 + 30; // 4:30 PM
-      const end = 18 * 60 + 30;   // 6:30 PM
-      return totalMinutes >= start && totalMinutes <= end;
+    const eveningStart = 16 * 60 + 30; // 4:30 PM
+    const eveningEnd = 18 * 60 + 30;   // 6:30 PM
+    const dinnerStart = 20 * 60;       // 8:00 PM
+    const dinnerEnd = 21 * 60;         // 9:00 PM
+
+    if (totalMinutes >= eveningStart && totalMinutes <= eveningEnd) {
+      return { type: 'EveningOuting', label: '🌆 Evening Outing (4:30 PM - 6:30 PM)' };
     }
-    if (type === 'DinnerBreak') {
-      const start = 20 * 60; // 8:00 PM
-      const end = 21 * 60;   // 9:00 PM
-      return totalMinutes >= start && totalMinutes <= end;
+    if (totalMinutes >= dinnerStart && totalMinutes <= dinnerEnd) {
+      return { type: 'DinnerBreak', label: '🍽 Dinner Outing (8:00 PM - 9:00 PM)' };
     }
-    return true;
+    return null;
+  };
+
+  const detectOutingType = (stud) => {
+    if (!stud) return null;
+
+    if (stud.activeEmergency) {
+      return {
+        type: 'EmergencyPermission',
+        label: `🚨 Approved Emergency Permission (Warden: ${stud.activeEmergency.wardenName})`,
+        reason: stud.activeEmergency.reason,
+        valid: true
+      };
+    }
+
+    if (stud.activeLeave && stud.activeLeave.status === 'Approved') {
+      return {
+        type: 'NativeLeave',
+        label: `🏠 Approved Native Leave (Warden: ${stud.activeLeave.wardenName})`,
+        reason: stud.activeLeave.reason,
+        valid: true
+      };
+    }
+
+    if (stud.activeStaffPermission && stud.activeStaffPermission.status === 'Approved') {
+      return {
+        type: 'StaffPermission',
+        label: `👤 Approved Staff Permission (Staff: ${stud.activeStaffPermission.staffName})`,
+        reason: stud.activeStaffPermission.reason,
+        valid: true
+      };
+    }
+
+    const scheduled = checkScheduledOuting();
+    if (scheduled) {
+      return {
+        type: scheduled.type,
+        label: scheduled.label,
+        reason: 'Regular daily outing',
+        valid: true
+      };
+    }
+
+    return {
+      type: null,
+      label: 'No active approved leaves, permissions, or scheduled outing times found.',
+      valid: false
+    };
   };
 
   const handleOut = async () => {
     if (!student) return toast.error('Search for a student first');
-    if (!movementType) return toast.error('Select movement type');
-
-    if (movementType === 'EveningOuting' && !checkOutingValid('EveningOuting')) {
-      return toast.error('Evening Outing is only allowed between 04:30 PM and 06:30 PM.');
-    }
-    if (movementType === 'DinnerBreak' && !checkOutingValid('DinnerBreak')) {
-      return toast.error('Dinner Outing is only allowed between 08:00 PM and 09:00 PM.');
-    }
-
-    if (movementType === 'Permission' && !permissionUntil) return toast.error('Select permission until time');
-    if (movementType === 'NativeLeave' && (!fromDate || !toDate)) return toast.error('Select leave dates');
-    if (movementType === 'StaffPermission') {
-      if (!staffName) return toast.error('Enter authorized staff name');
-      if (!reason) return toast.error('Enter reason');
-      if (!permissionDate) return toast.error('Select permission date');
-      if (!fromTime) return toast.error('Select from time');
-      if (!toTime) return toast.error('Select to time');
+    const detection = detectOutingType(student);
+    if (!detection || !detection.valid) {
+      return toast.error('Checkout is locked. No valid outing type detected.');
     }
 
     setLoading(true);
     try {
-      let res;
-      if (movementType === 'Permission') {
-        // Build datetime string from today + time
-        const today = new Date().toISOString().split('T')[0];
-        const fullDateTime = `${today}T${permissionUntil}:00`;
-        res = await grantPermission({
-          registerNumber: student.registerNumber,
-          permissionUntil: fullDateTime,
-          reason: reason || 'Personal work',
-        });
-      } else if (movementType === 'NativeLeave') {
-        res = await applyLeave({
-          registerNumber: student.registerNumber,
-          fromDate,
-          toDate,
-          reason: reason || 'Native leave',
-        });
-      } else if (movementType === 'StaffPermission') {
-        res = await grantStaffPermission({
-          registerNumber: student.registerNumber,
-          permissionDate,
-          fromTime,
-          toTime,
-          staffName,
-          reason,
-        });
-      } else {
-        res = await recordOut({
-          registerNumber: student.registerNumber,
-          movementType,
-          reason,
-        });
-      }
+      const res = await recordOut({ registerNumber: student.registerNumber });
       setResult({ type: 'success', data: res.data, alerts: res.data.alerts });
       toast.success(res.data.message);
     } catch (err) {
@@ -142,11 +120,8 @@ const StudentMovement = () => {
     setLoading(true);
     try {
       const res = await recordIn({ registerNumber: inStudent.registerNumber });
-      setResult({ type: 'in', data: res.data });
+      setResult({ type: 'in', data: res.data, alerts: res.data.alerts });
       toast.success(res.data.message);
-      if (res.data.data.isLate) {
-        toast.error(`⚠️ Late by ${res.data.data.lateByMinutes} minutes!`, { duration: 5000 });
-      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to record IN');
     } finally {
@@ -154,208 +129,154 @@ const StudentMovement = () => {
     }
   };
 
+  const handleGateSignOut = () => {
+    logout();
+    navigate('/gate/login');
+  };
+
+  const detectedOuting = detectOutingType(student);
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-950 text-white p-4 sm:p-6 flex flex-col justify-between">
       {/* Header */}
-      <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
-          <FiArrowLeft className="w-4 h-4" /> Home
-        </Link>
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-white">Attendance Portal</h1>
-          <p className="text-xs text-gray-400 font-medium">{currentTime.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'medium' })}</p>
+      <div className="max-w-2xl mx-auto w-full mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <FiShield className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-white leading-none">Hostel Gate Entry</h1>
+            <p className="text-[10px] text-gray-500 mt-0.5">Terminal: {user?.name}</p>
+          </div>
         </div>
-        <Link to="/warden/login" className="text-xs text-blue-400 hover:text-blue-300">Warden →</Link>
+
+        <div className="text-center hidden sm:block">
+          <p className="text-xs text-gray-400 font-semibold font-mono">
+            {currentTime.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' })}
+          </p>
+        </div>
+
+        <button
+          onClick={handleGateSignOut}
+          className="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-lg transition-all"
+        >
+          <FiLogOut className="w-3.5 h-3.5" /> Sign Out
+        </button>
       </div>
 
-      <div className="max-w-2xl mx-auto space-y-5">
-        {/* Mode toggle */}
-        <div className="glass-card p-1.5 flex gap-1.5">
-          {[{ id: 'out', icon: FiLogOut, label: 'Going OUT', color: 'text-amber-400' },
-            { id: 'in', icon: FiLogIn, label: 'Coming IN', color: 'text-emerald-400' }].map(({ id, icon: Icon, label, color }) => (
-            <button
-              key={id}
-              onClick={() => { setMode(id); resetForm(); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all ${
-                mode === id
-                  ? id === 'out'
-                    ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                    : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Icon className="w-4 h-4" /> {label}
-            </button>
-          ))}
-        </div>
+      {/* Main card */}
+      <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center space-y-5">
+        {!result && (
+          <div className="glass-card p-1.5 flex gap-1.5">
+            {[
+              { id: 'out', icon: FiLogOut, label: 'Record OUT', color: 'text-amber-400' },
+              { id: 'in', icon: FiLogIn, label: 'Record IN', color: 'text-emerald-400' }
+            ].map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                onClick={() => { setMode(id); resetForm(); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all ${
+                  mode === id
+                    ? id === 'out'
+                      ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
+                      : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Icon className="w-4 h-4" /> {label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* OUT form */}
+        {/* OUT Mode */}
         {mode === 'out' && !result && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             <div className="glass-card p-5">
-              <h2 className="text-sm font-semibold text-gray-300 mb-3">Step 1 — Find Student</h2>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Step 1 — Search Register Number</h2>
               <RegisterSearch onFound={setStudent} onClear={() => setStudent(null)} />
             </div>
-            <AnimatePresence>{student && <StudentCard student={student} />}</AnimatePresence>
 
-            {student && student.currentStatus === 'Inside' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-5 space-y-4">
-                <h2 className="text-sm font-semibold text-gray-300">Step 2 — Select Movement Type</h2>
-                <div className="grid grid-cols-1 gap-2">
-                  {MOVEMENT_TYPES.map(({ value, label, desc, color }) => {
-                    const isValid = checkOutingValid(value);
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => {
-                          if (isValid) {
-                            setMovementType(value);
-                          } else {
-                            toast.error(`${label} is only allowed during its scheduled hours: ${desc}`);
-                          }
-                        }}
-                        className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left ${
-                          !isValid
-                            ? 'opacity-45 cursor-not-allowed border-gray-800/80 bg-gray-900/40 text-gray-500'
-                            : movementType === value
-                            ? color
-                            : 'border-gray-700/50 bg-gray-800/40 hover:border-gray-600/50'
-                        }`}
-                      >
-                        <div className="flex-1">
-                          <p className={`text-sm font-semibold ${!isValid ? 'text-gray-500' : 'text-white'}`}>
-                            {label} {!isValid && <span className="text-xs text-red-500 font-normal ml-1">(Closed)</span>}
-                          </p>
-                          <p className="text-gray-400 text-xs">{desc}</p>
-                        </div>
-                        {isValid && movementType === value && <FiCheckCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Extra fields based on type */}
-                {movementType && movementType !== 'EveningOuting' && movementType !== 'DinnerBreak' && movementType !== 'StaffPermission' && (
-                  <div>
-                    <label className="form-label">Reason</label>
-                    <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Enter reason..." className="input-field" />
-                  </div>
-                )}
-                {movementType === 'Permission' && (
-                  <div>
-                    <label className="form-label">Permission Until (Time)</label>
-                    <input type="time" value={permissionUntil} onChange={e => setPermissionUntil(e.target.value)} className="input-field" />
-                  </div>
-                )}
-                {movementType === 'NativeLeave' && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="form-label">Reason</label>
-                      <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Enter reason..." className="input-field" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><label className="form-label">From Date</label><input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="input-field" /></div>
-                      <div><label className="form-label">To Date</label><input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="input-field" /></div>
-                    </div>
-                  </div>
-                )}
-                {movementType === 'StaffPermission' && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="form-label">Staff Name</label>
-                      <input
-                        type="text"
-                        value={staffName}
-                        onChange={e => setStaffName(e.target.value)}
-                        placeholder="Enter authorized staff name..."
-                        className="input-field"
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label">Reason</label>
-                      <input
-                        type="text"
-                        value={reason}
-                        onChange={e => setReason(e.target.value)}
-                        placeholder="Enter reason..."
-                        className="input-field"
-                      />
-                    </div>
-                    <div>
-                      <label className="form-label">Permission Date</label>
-                      <input
-                        type="date"
-                        value={permissionDate}
-                        onChange={e => setPermissionDate(e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="form-label">From Time</label>
-                        <input
-                          type="time"
-                          value={fromTime}
-                          onChange={e => setFromTime(e.target.value)}
-                          className="input-field"
-                        />
-                      </div>
-                      <div>
-                        <label className="form-label">To Time</label>
-                        <input
-                          type="time"
-                          value={toTime}
-                          onChange={e => setToTime(e.target.value)}
-                          className="input-field"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleOut}
-                  disabled={loading}
-                  className="btn-primary w-full flex items-center justify-center gap-2"
+            <AnimatePresence>
+              {student && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-4"
                 >
-                  {loading ? 'Recording...' : <><FiLogOut className="w-4 h-4" /> Record OUT Entry</>}
-                </motion.button>
-              </motion.div>
-            )}
-            {student && student.currentStatus !== 'Inside' && (
-              <div className="glass-card p-4 text-center">
-                <p className="text-amber-400 text-sm">⚠️ Student is currently <strong>{student.currentStatus}</strong>. Cannot record OUT.</p>
-              </div>
-            )}
+                  <StudentCard student={student} />
+
+                  <div className="glass-card p-5 space-y-4">
+                    <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Step 2 — Automated Outing Check</h2>
+                    
+                    {detectedOuting && detectedOuting.valid ? (
+                      <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-2">
+                        <p className="text-emerald-400 text-sm font-semibold flex items-center gap-1.5">
+                          <FiCheckCircle className="w-4 h-4" /> Valid checkout detected
+                        </p>
+                        <p className="text-white text-xs font-semibold">{detectedOuting.label}</p>
+                        <p className="text-gray-400 text-xs mt-0.5">Reason: <strong>{detectedOuting.reason}</strong></p>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 space-y-2">
+                        <p className="text-red-400 text-sm font-semibold flex items-center gap-1.5">
+                          <FiAlertCircle className="w-4 h-4" /> Checkout Locked
+                        </p>
+                        <p className="text-gray-300 text-xs">{detectedOuting?.label}</p>
+                      </div>
+                    )}
+
+                    {detectedOuting && detectedOuting.valid && (
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleOut}
+                        disabled={loading}
+                        className="btn-primary w-full py-3 rounded-xl font-semibold text-sm transition-all"
+                      >
+                        {loading ? 'Recording...' : 'Allow OUT (Record Gate Exit)'}
+                      </motion.button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
-        {/* IN form */}
+        {/* IN Mode */}
         {mode === 'in' && !result && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             <div className="glass-card p-5">
-              <h2 className="text-sm font-semibold text-gray-300 mb-3">Search Student</h2>
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Step 1 — Search Register Number</h2>
               <RegisterSearch onFound={setInStudent} onClear={() => setInStudent(null)} />
             </div>
-            <AnimatePresence>{inStudent && <StudentCard student={inStudent} />}</AnimatePresence>
-            {inStudent && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={handleIn}
-                disabled={loading}
-                className="btn-success w-full flex items-center justify-center gap-2"
-              >
-                {loading ? 'Recording...' : <><FiLogIn className="w-4 h-4" /> Record IN Entry</>}
-              </motion.button>
-            )}
+
+            <AnimatePresence>
+              {inStudent && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-4"
+                >
+                  <StudentCard student={inStudent} />
+
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleIn}
+                    disabled={loading}
+                    className="btn-success w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                  >
+                    {loading ? 'Recording...' : <><FiLogIn className="w-4 h-4" /> Record IN (Gate Entry)</>}
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
-        {/* Result card */}
+        {/* Result summary card */}
         <AnimatePresence>
           {result && (
             <motion.div
@@ -363,35 +284,55 @@ const StudentMovement = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               className={`glass-card p-6 text-center space-y-4 border ${
-                result.type === 'in' && result.data.data.isLate
+                result.type === 'error'
                   ? 'border-red-500/30 bg-red-900/10'
+                  : result.type === 'in' && result.data.data?.isLate
+                  ? 'border-red-500/30 bg-red-900/10'
+                  : result.type === 'in' && result.data.data?.returnedEarly
+                  ? 'border-blue-500/30 bg-blue-900/10'
                   : 'border-emerald-500/30 bg-emerald-900/10'
               }`}
             >
               <div className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center ${
-                result.type === 'in' && result.data.data.isLate ? 'bg-red-500/20' : 'bg-emerald-500/20'
+                result.type === 'error'
+                  ? 'bg-red-500/20'
+                  : result.type === 'in' && result.data.data?.isLate
+                  ? 'bg-red-500/20'
+                  : result.type === 'in' && result.data.data?.returnedEarly
+                  ? 'bg-blue-500/20'
+                  : 'bg-emerald-500/20'
               }`}>
-                {result.type === 'in' && result.data.data.isLate
+                {result.type === 'error'
+                  ? <FiAlertCircle className="w-7 h-7 text-red-400" />
+                  : result.type === 'in' && result.data.data?.isLate
                   ? <FiAlertCircle className="w-7 h-7 text-red-400" />
                   : <FiCheckCircle className="w-7 h-7 text-emerald-400" />
                 }
               </div>
               <div>
-                <p className="text-white font-bold text-lg">{result.data.message}</p>
-                {result.type === 'in' && result.data.data.durationMinutes && (
-                  <p className="text-gray-400 text-sm mt-1">Duration outside: <span className="text-white font-semibold">{result.data.data.durationMinutes} minutes</span></p>
+                <p className="text-white font-bold text-base">{result.type === 'error' ? result.message : result.data.message}</p>
+                {result.type === 'in' && result.data.data?.durationMinutes && (
+                  <p className="text-gray-400 text-xs mt-1">Duration outside: <span className="text-white font-semibold font-mono">{result.data.data.durationMinutes} minutes</span></p>
                 )}
-                {result.type === 'in' && result.data.data.isLate && (
-                  <p className="text-red-400 text-sm mt-1 font-semibold">⚠️ Late by {result.data.data.lateByMinutes} minutes</p>
+                {result.type === 'in' && result.data.data?.returnedEarly && (
+                  <p className="text-blue-400 text-xs mt-1 font-semibold">🟢 Returned early from Native Leave</p>
+                )}
+                {result.type === 'in' && result.data.data?.isLate && (
+                  <p className="text-red-400 text-xs mt-1 font-semibold">⚠️ Late by {result.data.data.lateByMinutes} minutes</p>
                 )}
                 {result.alerts?.map((a, i) => (
-                  <p key={i} className="text-amber-400 text-xs mt-1">ℹ️ {a}</p>
+                  <p key={i} className="text-amber-400 text-[10px] mt-1">ℹ️ {a}</p>
                 ))}
               </div>
-              <button onClick={resetForm} className="btn-secondary">Record Another Entry</button>
+              <button onClick={resetForm} className="btn-secondary py-2 text-xs">Record Another Entry</button>
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Footer copyright */}
+      <div className="text-center text-[10px] text-gray-600 mt-4">
+        © {new Date().getFullYear()} HostelFlow Gate Terminal. Security Log Enforced.
       </div>
     </div>
   );

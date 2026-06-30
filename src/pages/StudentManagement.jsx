@@ -194,7 +194,7 @@ const StudentManagement = () => {
               </div>
               <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="col-span-1 sm:col-span-2"><label className="form-label">Full Name</label><input required value={form.name} onChange={set('name')} placeholder="Arjun Kumar" className="input-field" /></div>
-                <div><label className="form-label">Register Number</label><input required value={form.registerNumber} onChange={e => setForm(p => ({ ...p, registerNumber: e.target.value.toUpperCase() }))} placeholder="CS2021001" className="input-field font-mono uppercase" disabled={!!editStudent} /></div>
+                <div><label className="form-label">Register Number</label><input required value={form.registerNumber} onChange={e => setForm(p => ({ ...p, registerNumber: e.target.value.toUpperCase() }))} placeholder="CS2021001" className="input-field font-mono uppercase" /></div>
                 <div><label className="form-label">Room Number</label><input required value={form.roomNumber} onChange={set('roomNumber')} placeholder="A-101" className="input-field" /></div>
                 <div className="col-span-1 sm:col-span-2"><label className="form-label">Email</label><input type="email" required value={form.email} onChange={set('email')} placeholder="student@college.edu.in" className="input-field" /></div>
                 <div><label className="form-label">Department</label><select required value={form.department} onChange={set('department')} className="input-field">{DEPTS.map(d => <option key={d}>{d}</option>)}</select></div>
