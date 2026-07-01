@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiLogIn, FiLoader } from 'react-icons/fi';
+import { FiLogIn, FiLoader, FiEye, FiEyeOff } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import AuthLayout from '../layouts/AuthLayout';
 import { wardenLogin } from '../services/authService';
@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 const GateLogin = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -44,14 +45,23 @@ const GateLogin = () => {
         </div>
         <div>
           <label className="form-label">Password</label>
-          <input
-            type="password"
-            required
-            value={form.password}
-            onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-            placeholder="••••••••"
-            className="input-field"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              value={form.password}
+              onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+              placeholder="••••••••"
+              className="input-field pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+            >
+              {showPassword ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
         <motion.button type="submit" disabled={loading} whileTap={{ scale: 0.97 }} className="btn-primary w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 border-none">
           {loading ? <FiLoader className="animate-spin w-4 h-4" /> : <FiLogIn className="w-4 h-4" />}

@@ -5,7 +5,7 @@ import LoadingSpinner from './LoadingSpinner';
 const ProtectedWardenRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner size="lg" text="Loading..." /></div>;
-  if (!user || user.role !== 'warden') return <Navigate to="/warden/login" replace />;
+  if (!user || (user.role !== 'warden' && user.role !== 'admin-mess')) return <Navigate to="/warden/login" replace />;
   return children;
 };
 

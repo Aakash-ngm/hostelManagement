@@ -15,6 +15,7 @@ const StudentRegister = () => {
     name: '', registerNumber: '', email: '', password: '',
     department: 'CSE', year: '1st Year', roomNumber: '', studentPhone: '', parentPhone: ''
   });
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -24,12 +25,34 @@ const StudentRegister = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password.length < 6) return toast.error('Password must be at least 6 characters');
+    if (form.password !== confirmPassword) return toast.error('Passwords do not match');
+
+    // Strict email structure validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(form.email)) {
+      return toast.error('Please enter a valid personal or professional email address (e.g. name@gmail.com or name@college.edu)');
+    }
+
+    // Gibberish / spam email detection
+    const username = form.email.split('@')[0].toLowerCase();
+    const hasRepeatingChars = /(.)\1\1/.test(username);
+    const hasManyConsonants = /[bcdfghjklmnpqrstvwxyz]{5,}/i.test(username);
+    const hasNoVowels = username.length >= 4 && !/[aeiouy]/i.test(username);
+    const isKeyboardSpam = ['qwerty', 'asdfgh', 'zxcvbn', 'asdasd', 'testtest'].some(p => username.includes(p));
+
+    if (hasRepeatingChars || hasManyConsonants || hasNoVowels || isKeyboardSpam) {
+      return toast.error('Gibberish or dummy email addresses (e.g. baschcc@gmail.com) are not allowed.');
+    }
+
     setLoading(true);
     try {
-      const res = await studentRegister({ ...form, registerNumber: form.registerNumber.toUpperCase() });
+      const res = await studentRegister({ 
+        ...form, 
+        registerNumber: form.registerNumber.toUpperCase() 
+      });
       login(res.data.data.user, res.data.data.token);
       toast.success('Registration successful!');
-      navigate('/student/history');
+      navigate('/student/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
     } finally {
@@ -54,8 +77,15 @@ const StudentRegister = () => {
             <input required value={form.roomNumber} onChange={set('roomNumber')} placeholder="A-101" className="input-field uppercase" />
           </div>
           <div className="col-span-1 sm:col-span-2">
-            <label className="form-label">Email</label>
-            <input type="email" required value={form.email} onChange={set('email')} placeholder="student@college.edu.in" className="input-field" />
+            <label className="form-label">Email Address</label>
+            <input 
+              type="email" 
+              required 
+              value={form.email} 
+              onChange={set('email')} 
+              placeholder="e.g. name@gmail.com or name@college.edu.in" 
+              className="input-field" 
+            />
           </div>
           <div>
             <label className="form-label">Department</label>
@@ -80,6 +110,10 @@ const StudentRegister = () => {
           <div className="col-span-1 sm:col-span-2">
             <label className="form-label">Password</label>
             <input type="password" required value={form.password} onChange={set('password')} placeholder="Min. 6 characters" className="input-field" />
+          </div>
+          <div className="col-span-1 sm:col-span-2">
+            <label className="form-label">Confirm Password</label>
+            <input type="password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Re-enter password" className="input-field" />
           </div>
         </div>
         <motion.button type="submit" disabled={loading} whileTap={{ scale: 0.97 }} className="btn-primary w-full flex items-center justify-center gap-2 mt-2">

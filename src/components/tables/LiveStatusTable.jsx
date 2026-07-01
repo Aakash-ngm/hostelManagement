@@ -48,7 +48,8 @@ const LiveStatusTable = ({ students = [] }) => {
         <span className="text-xs text-gray-500 whitespace-nowrap">{filtered.length} students</span>
       </div>
 
-      <div className="overflow-auto rounded-xl border border-gray-800/50">
+      {/* Desktop View */}
+      <div className="hidden md:block overflow-auto rounded-xl border border-gray-800/50">
         <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="bg-gray-800/80">
@@ -81,6 +82,52 @@ const LiveStatusTable = ({ students = [] }) => {
             ))}
           </tbody>
         </table>
+        {filtered.length === 0 && (
+          <div className="py-12 text-center text-gray-500 text-sm">
+            No students found
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Card List View */}
+      <div className="block md:hidden space-y-3">
+        {filtered.map((s, i) => (
+          <motion.div
+            key={s._id || s.registerNumber}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.02 }}
+            className="p-4 rounded-xl bg-gray-900/60 border border-gray-800/50 space-y-2.5"
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-white font-semibold text-sm">{s.name}</p>
+                <p className="text-blue-400 text-xs font-mono mt-0.5">{s.registerNumber}</p>
+              </div>
+              <Badge status={s.currentStatus} />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 pt-2 border-t border-gray-800/60">
+              <div>
+                <span className="text-[10px] text-gray-500 block uppercase tracking-wider font-semibold">Dept & Year</span>
+                <span className="text-gray-300">{s.department} — {s.year}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-500 block uppercase tracking-wider font-semibold">Room No.</span>
+                <span className="text-gray-300">Room {s.roomNumber || '—'}</span>
+              </div>
+            </div>
+
+            {s.studentPhone && (
+              <div className="pt-2 border-t border-gray-800/60 flex items-center justify-between">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Contact</span>
+                <a href={`tel:${s.studentPhone}`} className="text-xs font-mono font-bold text-emerald-400 hover:text-emerald-300">
+                  📞 {s.studentPhone}
+                </a>
+              </div>
+            )}
+          </motion.div>
+        ))}
         {filtered.length === 0 && (
           <div className="py-12 text-center text-gray-500 text-sm">
             No students found

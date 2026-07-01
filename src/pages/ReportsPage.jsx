@@ -7,10 +7,12 @@ import Badge from '../components/common/Badge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { DailyAttendanceChart, WeeklyTrendChart } from '../components/charts/AttendanceChart';
 import { getDailyReport, getWeeklyReport, getMonthlyReport, exportReport } from '../services/reportService';
+import { useAuth } from '../context/AuthContext';
 
 const TABS = ['Daily', 'Weekly', 'Monthly'];
 
 const ReportsPage = () => {
+  const { user } = useAuth();
   const [tab, setTab] = useState('Daily');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
@@ -42,7 +44,233 @@ const ReportsPage = () => {
   };
 
   const records = report?.records || [];
+  const mealAllocation = report?.mealAllocation || [];
   const stats = report?.stats || {};
+
+  console.log('--- FRONTEND REPORT DEBUG ---');
+  console.log('Full report object:', report);
+  console.log('Meal Allocation List:', mealAllocation);
+  console.log('Movement Records List:', records);
+  console.log('------------------------------');
+
+  if (user?.role === 'admin-mess') {
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto space-y-5">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-white">Mess & Dining Reports</h1>
+              <p className="text-sm text-gray-400 mt-0.5">Generate and export mess attendance summary statistics</p>
+            </div>
+            <button onClick={handleExport} className="btn-primary flex items-center gap-2 self-start sm:self-auto bg-emerald-600 hover:bg-emerald-500 border-none">
+              <FiDownload className="w-4 h-4" /> Export Excel
+            </button>
+          </div>
+
+          {/* Tab + Filters */}
+          <div className="glass-card p-4 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 md:pb-0">
+              {TABS.map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex-1 md:flex-initial text-center ${
+                    tab === t ? 'bg-blue-600 text-white' : 'bg-gray-800/60 text-gray-400 hover:text-white border border-gray-700/50'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 w-full md:w-auto md:ml-auto justify-end">
+              {tab === 'Daily' && (
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <FiCalendar className="text-gray-400 w-4 h-4 flex-shrink-0" />
+                  <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="input-field py-2 w-full md:w-auto" />
+                </div>
+              )}
+              {tab === 'Monthly' && (
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="input-field py-2 flex-1 md:w-auto">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                      <option key={m} value={m}>{new Date(2024, m - 1).toLocaleString('en-IN', { month: 'long' })}</option>
+                    ))}
+                  </select>
+                  <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="input-field py-2 flex-1 md:w-auto">
+                    {[2024, 2025, 2026].map(y => <option key={y}>{y}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Daily Stats Grid */}
+          {tab === 'Daily' && stats && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+                {[
+                  { label: '🍳 Breakfast Count', value: stats.breakfastCount || 0, color: 'text-emerald-400' },
+                  { label: '🍛 Lunch Count', value: stats.lunchCount || 0, color: 'text-blue-400' },
+                  { label: '🍽️ Dinner Count', value: stats.dinnerCount || 0, color: 'text-amber-400' },
+                  { label: '🟢 Inside Hostel', value: stats.studentsInside || 0, color: 'text-teal-400' },
+                  { label: '🔵 Outside Hostel', value: stats.studentsOutside || 0, color: 'text-orange-400' },
+                  { label: '🏡 On Native Leave', value: stats.nativeLeaveCount || 0, color: 'text-purple-400' },
+                  { label: '📝 On Permission', value: stats.permissionCount || 0, color: 'text-indigo-400' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="glass-card p-4 text-center">
+                    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                    <p className="text-xs text-gray-500 mt-1">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Student Wise Meal Attendance Table */}
+              <div className="glass-card overflow-hidden mt-6">
+                <div className="px-5 py-3.5 border-b border-gray-800/50 flex items-center justify-between">
+                  <h3 className="text-white font-semibold text-sm">Student Meal Allocation Lists</h3>
+                  <span className="text-xs text-gray-400">{mealAllocation.length} students</span>
+                </div>
+                {loading ? (
+                  <div className="py-16 flex justify-center"><LoadingSpinner text="Loading list..." /></div>
+                ) : (
+                  <>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-auto">
+                      <table className="w-full text-sm min-w-[800px]">
+                        <thead>
+                          <tr className="bg-gray-800/80">
+                            {['S.No', 'Register No.', 'Student Name', 'Room No.', 'Status', 'Breakfast', 'Lunch', 'Dinner'].map(h => (
+                              <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-800/50">
+                          {mealAllocation.map((r, i) => (
+                            <tr key={r._id} className="hover:bg-gray-800/30 transition-colors">
+                              <td className="px-4 py-3 text-gray-500 text-xs">{i + 1}</td>
+                              <td className="px-4 py-3 font-mono text-blue-400 text-xs font-medium">{r.registerNumber}</td>
+                              <td className="px-4 py-3 text-white text-sm font-medium">{r.studentName}</td>
+                              <td className="px-4 py-3 text-gray-300 text-xs">{r.roomNumber}</td>
+                              <td className="px-4 py-3 text-xs">
+                                <Badge status={r.status} label={r.status} />
+                              </td>
+                              <td className="px-4 py-3 text-xs">
+                                <span className={`inline-flex items-center gap-1 font-semibold ${
+                                  r.breakfast === 'Included' ? 'text-emerald-400' : 'text-red-400'
+                                }`}>
+                                  {r.breakfast === 'Included' ? '✅ Included' : '❌ Excluded'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs">
+                                <span className={`inline-flex items-center gap-1 font-semibold ${
+                                  r.lunch === 'Included' ? 'text-emerald-400' : 'text-red-400'
+                                }`}>
+                                  {r.lunch === 'Included' ? '✅ Included' : '❌ Excluded'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs">
+                                <span className={`inline-flex items-center gap-1 font-semibold ${
+                                  r.dinner === 'Included' ? 'text-emerald-400' : 'text-red-400'
+                                }`}>
+                                  {r.dinner === 'Included' ? '✅ Included' : '❌ Excluded'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Card List View */}
+                    <div className="block md:hidden p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                      {mealAllocation.map((r) => (
+                        <div key={r._id} className="p-4 rounded-xl bg-gray-800/40 border border-gray-700/30 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-white font-semibold text-sm">{r.studentName}</p>
+                              <p className="text-blue-400 text-xs font-mono mt-0.5">{r.registerNumber}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-gray-400">Room {r.roomNumber || '—'}</span>
+                              <div className="mt-1"><Badge status={r.status} label={r.status} /></div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-gray-800/60 text-center">
+                            <div>
+                              <p className="text-[10px] text-gray-500 font-semibold uppercase">Breakfast</p>
+                              <span className={`text-xs font-bold block mt-1 ${r.breakfast === 'Included' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {r.breakfast === 'Included' ? '✅ In' : '❌ Out'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-500 font-semibold uppercase">Lunch</p>
+                              <span className={`text-xs font-bold block mt-1 ${r.lunch === 'Included' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {r.lunch === 'Included' ? '✅ In' : '❌ Out'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-gray-500 font-semibold uppercase">Dinner</p>
+                              <span className={`text-xs font-bold block mt-1 ${r.dinner === 'Included' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {r.dinner === 'Included' ? '✅ In' : '❌ Out'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Historical Table for Weekly & Monthly stats */}
+          {(tab === 'Weekly' || tab === 'Monthly') && (
+            <div className="glass-card overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-800/50 flex items-center justify-between">
+                <h3 className="text-white font-semibold text-sm">Mess Attendance Summaries</h3>
+                <span className="text-xs text-gray-400">{(report?.dailyStats || []).length} days</span>
+              </div>
+              {loading ? (
+                <div className="py-16 flex justify-center"><LoadingSpinner text="Loading stats..." /></div>
+              ) : (
+                <div className="overflow-auto">
+                  <table className="w-full text-sm min-w-[800px]">
+                    <thead>
+                      <tr className="bg-gray-800/80">
+                        {['Date', '🍳 Breakfast', '🍛 Lunch', '🍽️ Dinner', '🟢 Inside', '🔵 Outside', '🏡 Native Leave', '📝 Staff Permission'].map(h => (
+                          <th key={h} className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800/50 text-center">
+                      {(report?.dailyStats || []).map((dayData, idx) => (
+                        <tr key={idx} className="hover:bg-gray-800/30 transition-colors">
+                          <td className="px-4 py-3 text-white font-medium text-xs">{dayData.date}</td>
+                          <td className="px-4 py-3 text-emerald-400 font-bold text-sm">{dayData.breakfastCount}</td>
+                          <td className="px-4 py-3 text-blue-400 font-bold text-sm">{dayData.lunchCount}</td>
+                          <td className="px-4 py-3 text-amber-400 font-bold text-sm">{dayData.dinnerCount}</td>
+                          <td className="px-4 py-3 text-gray-300 text-xs">{dayData.studentsInside}</td>
+                          <td className="px-4 py-3 text-gray-300 text-xs">{dayData.studentsOutside}</td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">{dayData.nativeLeaveCount}</td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">{dayData.permissionCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(report?.dailyStats || []).length === 0 && (
+                    <div className="py-14 text-center text-gray-500">No records for this period</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

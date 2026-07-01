@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiLogIn, FiLoader, FiArrowLeft } from 'react-icons/fi';
+import { FiLogIn, FiLoader, FiArrowLeft, FiEye, FiEyeOff } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import AuthLayout from '../layouts/AuthLayout';
 import { wardenLogin } from '../services/authService';
@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 const WardenLogin = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -44,14 +45,23 @@ const WardenLogin = () => {
         </div>
         <div>
           <label className="form-label">Password</label>
-          <input
-            type="password"
-            required
-            value={form.password}
-            onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-            placeholder="Enter your password"
-            className="input-field"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              value={form.password}
+              onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+              placeholder="Enter your password"
+              className="input-field pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+            >
+              {showPassword ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
         <motion.button
@@ -65,10 +75,6 @@ const WardenLogin = () => {
         </motion.button>
       </form>
       <div className="mt-6 space-y-3 text-center text-sm">
-        <p className="text-gray-500">
-          Don't have an account?{' '}
-          <Link to="/warden/register" className="text-blue-400 hover:text-blue-300 font-medium">Register</Link>
-        </p>
         <Link to="/" className="flex items-center justify-center gap-1 text-gray-500 hover:text-gray-300 transition-colors">
           <FiArrowLeft className="w-3 h-3" /> Back to Home
         </Link>

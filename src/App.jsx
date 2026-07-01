@@ -66,7 +66,6 @@ function App() {
 
             {/* Warden auth */}
             <Route path="/warden/login" element={<WardenLogin />} />
-            <Route path="/warden/register" element={<WardenRegister />} />
 
             {/* Student auth */}
             <Route path="/student/login" element={<StudentLogin />} />

@@ -56,12 +56,14 @@ const DashboardLayout = ({ children }) => {
         </div>
         <div>
           <p className="text-white font-bold text-sm">HostelFlow</p>
-          <p className="text-blue-400 text-xs">Warden Portal</p>
+          <p className="text-blue-400 text-xs">{user?.role === 'admin-mess' ? 'Admin Mess Portal' : 'Warden Portal'}</p>
         </div>
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {navItems
+          .filter(({ label }) => user?.role !== 'admin-mess' || label === 'Dashboard' || label === 'Reports')
+          .map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
@@ -156,18 +158,20 @@ const DashboardLayout = ({ children }) => {
             <p className="text-sm text-gray-400">Welcome back, <span className="text-white font-semibold">{user?.name}</span></p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={() => navigate('/warden/notifications')}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all relative flex items-center justify-center"
-              title="Notifications"
-            >
-              <FiBell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded-full min-w-[16px] h-[16px] flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
+            {user?.role !== 'admin-mess' && (
+              <button
+                onClick={() => navigate('/warden/notifications')}
+                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all relative flex items-center justify-center"
+                title="Notifications"
+              >
+                <FiBell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded-full min-w-[16px] h-[16px] flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            )}
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
