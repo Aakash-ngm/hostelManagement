@@ -28,6 +28,7 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (user?.role === 'admin-mess') return;
     const fetchUnread = async () => {
       try {
         const res = await getNotifications({ limit: 1 });
@@ -40,7 +41,7 @@ const DashboardLayout = ({ children }) => {
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   const handleLogout = () => {
     logout();

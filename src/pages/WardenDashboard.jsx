@@ -34,6 +34,7 @@ const WardenDashboard = () => {
   const [emergencyHistory, setEmergencyHistory] = useState([]);
 
   const fetchPending = async () => {
+    if (user?.role === 'admin-mess') return;
     try {
       const res = await getPendingLeaves();
       setPendingLeaves(res.data.data.leaves || []);
@@ -41,6 +42,7 @@ const WardenDashboard = () => {
   };
 
   const fetchPendingStaff = async () => {
+    if (user?.role === 'admin-mess') return;
     try {
       const res = await getPendingPermissions();
       setPendingStaffPermissions(res.data.data.permissions || []);
@@ -48,6 +50,7 @@ const WardenDashboard = () => {
   };
 
   const fetchEmergencyHistory = async () => {
+    if (user?.role === 'admin-mess') return;
     try {
       const res = await getEmergencyHistory({ filter: emergencyFilter });
       setEmergencyHistory(res.data.data.history || []);
@@ -561,98 +564,80 @@ const WardenDashboard = () => {
         </motion.div>
 
         {/* Emergency Permission History */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="glass-card p-5 space-y-4"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h3 className="text-white font-semibold flex items-center gap-2">
-                <FiAlertTriangle className="text-red-400 w-4 h-4" />
-                Emergency Permission History
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">Logs of all student emergency checkout attempts</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1 bg-gray-950 p-1 rounded-xl border border-gray-800">
-                {['today', 'week', 'month'].map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setEmergencyFilter(f)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all ${
-                      emergencyFilter === f
-                        ? 'bg-red-500/20 border border-red-500/30 text-red-400'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    {f}
-                  </button>
-                ))}
+        {user?.role !== 'admin-mess' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="glass-card p-5 space-y-4"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <FiAlertTriangle className="text-red-400 w-4 h-4" />
+                  Emergency Permission History
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">Logs of all student emergency checkout attempts</p>
               </div>
-              <button
-                onClick={() => {
-                  toast.promise(
-                    exportReport('emergency'),
-                    {
-                      loading: 'Exporting Excel report...',
-                      success: 'Excel report downloaded!',
-                      error: 'Export failed.'
-                    }
-                  );
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 rounded-xl text-xs font-semibold transition-all"
-              >
-                📥 Export Excel
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1 bg-gray-950 p-1 rounded-xl border border-gray-800">
+                  {['today', 'week', 'month'].map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setEmergencyFilter(f)}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase transition-all ${
+                        emergencyFilter === f ? 'bg-red-500/20 text-red-400' : 'text-gray-500 hover:text-white'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div className="overflow-auto rounded-xl border border-gray-800/50">
-            <table className="w-full text-sm min-w-[720px]">
-              <thead>
-                <tr className="bg-gray-800/80">
-                  <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Register No.</th>
-                  <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Name</th>
-                  <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Date</th>
-                  <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Time</th>
-                  <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Reason</th>
-                  <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Decision</th>
-                  <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">OUT Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800/50">
-                {emergencyHistory.map((e, idx) => (
-                  <tr key={e._id || idx} className="hover:bg-gray-800/30 transition-colors">
-                    <td className="px-4 py-2.5 font-mono text-blue-400 text-xs font-medium">{e.registerNumber}</td>
-                    <td className="px-4 py-2.5 text-white text-sm">{e.studentName}</td>
-                    <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">{e.date}</td>
-                    <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">{e.time}</td>
-                    <td className="px-4 py-2.5 text-gray-400 text-xs max-w-[150px] truncate">{e.reason}</td>
-                    <td className="px-4 py-2.5 text-xs">
-                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase border ${
-                        e.wardenDecision === 'Approved'
-                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                          : 'bg-red-500/10 border-red-500/20 text-red-400'
-                      }`}>
-                        {e.wardenDecision}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">
-                      {e.outTime ? new Date(e.outTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                    </td>
+            <div className="overflow-auto rounded-xl border border-gray-800/50">
+              <table className="w-full text-sm min-w-[700px]">
+                <thead>
+                  <tr className="bg-gray-800/80">
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Register No.</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Name</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Time</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Reason</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Warden</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Decision</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Checkout Time</th>
                   </tr>
-                ))}
-                {emergencyHistory.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-gray-500 text-xs">No emergency records found</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
+                </thead>
+                <tbody className="divide-y divide-gray-800/50">
+                  {emergencyHistory.map(e => (
+                    <tr key={e._id} className="hover:bg-gray-800/30 transition-colors">
+                      <td className="px-4 py-2.5 font-mono text-blue-400 text-xs font-medium">{e.registerNumber}</td>
+                      <td className="px-4 py-2.5 text-white text-sm">{e.studentName}</td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">{e.date} {e.time}</td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs max-w-[120px] truncate">{e.reason}</td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs">{e.wardenName || '-'}</td>
+                      <td className="px-4 py-2.5 text-xs">
+                        <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
+                          e.wardenDecision === 'Approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                          {e.wardenDecision}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">
+                        {e.outTime ? new Date(e.outTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                  {emergencyHistory.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 text-xs">No emergency records found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
 
         {/* Live status table */}
         <motion.div
