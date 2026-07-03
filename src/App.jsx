@@ -13,6 +13,8 @@ import StudentRegister from './pages/StudentRegister';
 import StudentMovement from './pages/StudentMovement';
 import StudentHistory from './pages/StudentHistory';
 import WardenDashboard from './pages/WardenDashboard';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
 import StudentManagement from './pages/StudentManagement';
 import LiveStatusPage from './pages/LiveStatusPage';
 import ReportsPage from './pages/ReportsPage';
@@ -67,6 +69,9 @@ function App() {
             {/* Warden auth */}
             <Route path="/warden/login" element={<WardenLogin />} />
 
+            {/* Admin auth */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+
             {/* Student auth */}
             <Route path="/student/login" element={<StudentLogin />} />
             <Route path="/student/register" element={<StudentRegister />} />
@@ -101,6 +106,14 @@ function App() {
             } />
             <Route path="/warden/students" element={
               <ProtectedWardenRoute><StudentManagement /></ProtectedWardenRoute>
+            } />
+
+            {/* Protected admin routes */}
+            <Route path="/admin/dashboard" element={
+              <ProtectedWardenRoute><AdminDashboard /></ProtectedWardenRoute>
+            } />
+            <Route path="/admin/reports" element={
+              <ProtectedWardenRoute><ReportsPage /></ProtectedWardenRoute>
             } />
             <Route path="/warden/live-status" element={
               <ProtectedWardenRoute><LiveStatusPage /></ProtectedWardenRoute>

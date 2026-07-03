@@ -7,7 +7,7 @@ import AuthLayout from '../layouts/AuthLayout';
 import { wardenLogin } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 
-const WardenLogin = () => {
+const AdminLogin = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -22,15 +22,15 @@ const WardenLogin = () => {
       const user = res.data.data.user;
       const token = res.data.data.token;
 
-      if (user.role === 'admin-mess') {
-        toast.error('Access Denied. Please use the Admin Portal.');
+      if (user.role !== 'admin-mess') {
+        toast.error('Access Denied. Please use the Warden Portal.');
         setLoading(false);
         return;
       }
 
       login(user, token);
-      toast.success(`Welcome back, ${user.name}!`);
-      navigate('/warden/dashboard');
+      toast.success(`Welcome back Admin, ${user.name}!`);
+      navigate('/admin/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
     } finally {
@@ -39,7 +39,7 @@ const WardenLogin = () => {
   };
 
   return (
-    <AuthLayout title="Warden Login" subtitle="Access your hostel management dashboard">
+    <AuthLayout title="Admin Login" subtitle="Access your mess administration portal">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="form-label">Email Address</label>
@@ -60,7 +60,7 @@ const WardenLogin = () => {
               required
               value={form.password}
               onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-              placeholder="Enter your password"
+              placeholder="Enter your admin password"
               className="input-field pr-10"
             />
             <button
@@ -74,22 +74,29 @@ const WardenLogin = () => {
         </div>
 
         <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           type="submit"
           disabled={loading}
-          whileTap={{ scale: 0.97 }}
-          className="btn-primary w-full flex items-center justify-center gap-2"
+          className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold rounded-xl shadow-lg shadow-red-950/20 disabled:opacity-50 transition-all"
         >
-          {loading ? <FiLoader className="animate-spin w-4 h-4" /> : <FiLogIn className="w-4 h-4" />}
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? (
+            <FiLoader className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <FiLogIn className="w-5 h-5" /> Sign In
+            </>
+          )}
         </motion.button>
       </form>
-      <div className="mt-6 space-y-3 text-center text-sm">
-        <Link to="/" className="flex items-center justify-center gap-1 text-gray-500 hover:text-gray-300 transition-colors">
-          <FiArrowLeft className="w-3 h-3" /> Back to Home
+
+      <div className="mt-6 text-center">
+        <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+          <FiArrowLeft className="w-4 h-4" /> Back to Home
         </Link>
       </div>
     </AuthLayout>
   );
 };
 
-export default WardenLogin;
+export default AdminLogin;

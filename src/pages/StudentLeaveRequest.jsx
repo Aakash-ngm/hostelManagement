@@ -20,6 +20,7 @@ const StudentLeaveRequest = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [selectedWardenId, setSelectedWardenId] = useState('');
+  const [outTimeSeason, setOutTimeSeason] = useState('Morning');
   const [reason, setReason] = useState('');
 
   const fetchData = async () => {
@@ -55,13 +56,15 @@ const StudentLeaveRequest = () => {
         fromDate,
         toDate,
         reason,
-        wardenId: selectedWardenId
+        wardenId: selectedWardenId,
+        outTimeSeason
       });
       toast.success('Native Leave request submitted successfully!');
       // Reset form
       setFromDate('');
       setToDate('');
       setSelectedWardenId('');
+      setOutTimeSeason('Morning');
       setReason('');
       fetchData();
     } catch (err) {
@@ -114,6 +117,21 @@ const StudentLeaveRequest = () => {
                   placeholder="Enter reason for leave..."
                   className="input-field text-sm"
                 />
+              </div>
+
+              <div>
+                <label className="form-label text-xs">Departure Slot</label>
+                <select
+                  required
+                  value={outTimeSeason}
+                  onChange={e => setOutTimeSeason(e.target.value)}
+                  className="input-field bg-gray-900 border border-gray-700/50 text-white rounded-xl w-full p-2.5 text-sm"
+                >
+                  <option value="Morning">Morning (06:00 AM - 12:00 PM)</option>
+                  <option value="Afternoon">Afternoon (12:00 PM - 04:00 PM)</option>
+                  <option value="Evening">Evening (04:00 PM - 07:00 PM)</option>
+                  <option value="Night">Night (07:00 PM - 10:00 PM)</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -173,7 +191,10 @@ const StudentLeaveRequest = () => {
                   <tbody className="divide-y divide-gray-800/50">
                     {leaves.map((l, idx) => (
                       <tr key={l._id || idx} className="hover:bg-gray-800/30 transition-colors">
-                        <td className="px-3 py-2.5 font-semibold text-white capitalize">{l.wardenName}</td>
+                        <td className="px-3 py-2.5 font-semibold text-white capitalize">
+                          {l.wardenName}
+                          <span className="block text-[10px] text-gray-500 font-normal">Slot: {l.outTimeSeason || 'Morning'}</span>
+                        </td>
                         <td className="px-3 py-2.5 text-gray-400 font-mono">
                           {new Date(l.fromDate).toLocaleDateString('en-IN')}
                         </td>

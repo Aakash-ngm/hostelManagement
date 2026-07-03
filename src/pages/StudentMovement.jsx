@@ -62,10 +62,74 @@ const StudentMovement = () => {
     }
 
     if (stud.activeLeave && stud.activeLeave.status === 'Approved') {
+      const leave = stud.activeLeave;
+      const getISTDateTime = () => {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Kolkata',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          hour12: false
+        });
+        const parts = formatter.formatToParts(now);
+        const partMap = {};
+        parts.forEach(p => { partMap[p.type] = p.value; });
+        const dateStr = `${partMap.year}-${partMap.month}-${partMap.day}`;
+        const hour = parseInt(partMap.hour, 10);
+        return { dateStr, hour };
+      };
+
+      const getSlotRangeLabel = (slot) => {
+        if (slot === 'Morning') return 'Morning (6:00 AM - 12:00 PM)';
+        if (slot === 'Afternoon') return 'Afternoon (12:00 PM - 4:00 PM)';
+        if (slot === 'Evening') return 'Evening (4:00 PM - 7:00 PM)';
+        if (slot === 'Night') return 'Night (7:00 PM - 10:00 PM)';
+        return '';
+      };
+
+      const getSlotName = (hr) => {
+        if (hr >= 6 && hr < 12) return 'Morning';
+        if (hr >= 12 && hr < 16) return 'Afternoon';
+        if (hr >= 16 && hr < 19) return 'Evening';
+        if (hr >= 19 && hr < 22) return 'Night';
+        return 'Restricted Hours';
+      };
+
+      const { dateStr: currentISTDate, hour: currentHour } = getISTDateTime();
+      const scheduledStartDate = new Date(leave.fromDate).toISOString().split('T')[0];
+      const fromDateStr = new Date(leave.fromDate).toLocaleDateString('en-IN');
+      const expectedSlot = leave.outTimeSeason || 'Morning';
+      const rangeLabel = getSlotRangeLabel(expectedSlot);
+
+      if (currentISTDate !== scheduledStartDate) {
+        return {
+          type: 'NativeLeave',
+          label: currentISTDate < scheduledStartDate
+            ? `Your approved leave is scheduled for tomorrow/future (${fromDateStr}) during the ${expectedSlot} slot. You cannot check out early today.`
+            : `Your approved leave start date (${fromDateStr}) has expired. Please contact the warden.`,
+          reason: leave.reason,
+          valid: false
+        };
+      }
+
+      const currentSlot = getSlotName(currentHour);
+      if (currentSlot !== expectedSlot) {
+        return {
+          type: 'NativeLeave',
+          label: currentSlot === 'Restricted Hours'
+            ? `Your departure slot is ${expectedSlot} (${rangeLabel}). You cannot check out during Restricted Hours.`
+            : `Your departure slot is ${expectedSlot} (${rangeLabel}). You cannot check out during ${currentSlot}.`,
+          reason: leave.reason,
+          valid: false
+        };
+      }
+
       return {
         type: 'NativeLeave',
-        label: `🏠 Approved Native Leave (Warden: ${stud.activeLeave.wardenName})`,
-        reason: stud.activeLeave.reason,
+        label: `🏠 Approved Native Leave (${expectedSlot} Slot) (Warden: ${leave.wardenName})`,
+        reason: leave.reason,
         valid: true
       };
     }

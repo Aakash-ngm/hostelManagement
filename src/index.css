@@ -231,3 +231,12 @@
 .light .btn-primary {
   box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2), 0 2px 4px -1px rgba(59, 130, 246, 0.1) !important;
 }
+
+/* Light mode table row hover fixes */
+.light .hover\:bg-gray-800\/30:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.light .hover\:bg-gray-800\/60:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}

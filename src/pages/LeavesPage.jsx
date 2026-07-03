@@ -123,6 +123,7 @@ const LeavesPage = () => {
                         </td>
                         <td className="px-4 py-3 text-gray-400 text-xs font-mono">
                           {new Date(l.fromDate).toLocaleDateString('en-IN')}
+                          <span className="block text-[10px] text-purple-400 font-semibold mt-0.5 capitalize">{l.outTimeSeason || 'Morning'}</span>
                         </td>
                         <td className="px-4 py-3 text-gray-400 text-xs font-mono">
                           {new Date(l.toDate).toLocaleDateString('en-IN')}{' '}

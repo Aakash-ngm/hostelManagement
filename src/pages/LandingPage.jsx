@@ -124,7 +124,7 @@ const LandingPage = () => {
           </p>
 
           {/* Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <div className="flex flex-wrap gap-4 pt-4">
             <Link to="/student/login">
               <motion.button
                 whileHover={{ scale: 1.03, y: -2 }}
@@ -141,6 +141,15 @@ const LandingPage = () => {
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-blue-900/30 text-sm transition-all"
               >
                 <FiGrid className="w-4 h-4" /> Warden Portal
+              </motion.button>
+            </Link>
+            <Link to="/admin/login">
+              <motion.button
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold rounded-2xl shadow-lg shadow-red-950/20 text-sm transition-all"
+              >
+                <FiShield className="w-4 h-4" /> Admin Portal
               </motion.button>
             </Link>
             <Link to="/gate/login">

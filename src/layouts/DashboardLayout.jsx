@@ -11,13 +11,15 @@ import { useTheme } from '../context/ThemeContext';
 import { getNotifications } from '../services/notificationService';
 
 const navItems = [
-  { to: '/warden/dashboard', icon: FiGrid, label: 'Dashboard' },
-  { to: '/warden/students', icon: FiUsers, label: 'Students' },
-  { to: '/warden/live-status', icon: FiHome, label: 'Live Status' },
-  { to: '/warden/reports', icon: FiFileText, label: 'Reports' },
-  { to: '/warden/permissions', icon: FiClock, label: 'Permissions' },
-  { to: '/warden/leaves', icon: FiCalendar, label: 'Native Leaves' },
-  { to: '/warden/notifications', icon: FiBell, label: 'Notifications' },
+  { to: '/warden/dashboard', icon: FiGrid, label: 'Dashboard', roles: ['warden'] },
+  { to: '/admin/dashboard', icon: FiGrid, label: 'Dashboard', roles: ['admin-mess'] },
+  { to: '/warden/students', icon: FiUsers, label: 'Students', roles: ['warden'] },
+  { to: '/warden/live-status', icon: FiHome, label: 'Live Status', roles: ['warden'] },
+  { to: '/warden/reports', icon: FiFileText, label: 'Reports', roles: ['warden'] },
+  { to: '/admin/reports', icon: FiFileText, label: 'Reports', roles: ['admin-mess'] },
+  { to: '/warden/permissions', icon: FiClock, label: 'Permissions', roles: ['warden'] },
+  { to: '/warden/leaves', icon: FiCalendar, label: 'Native Leaves', roles: ['warden'] },
+  { to: '/warden/notifications', icon: FiBell, label: 'Notifications', roles: ['warden'] },
 ];
 
 const DashboardLayout = ({ children }) => {
@@ -63,7 +65,7 @@ const DashboardLayout = ({ children }) => {
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems
-          .filter(({ label }) => user?.role !== 'admin-mess' || label === 'Dashboard' || label === 'Reports')
+          .filter(({ roles }) => !roles || roles.includes(user?.role))
           .map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
