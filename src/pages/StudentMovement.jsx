@@ -61,88 +61,133 @@ const StudentMovement = () => {
       };
     }
 
+    const getISTDateTime = () => {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        hour12: false
+      });
+      const parts = formatter.formatToParts(now);
+      const partMap = {};
+      parts.forEach(p => { partMap[p.type] = p.value; });
+      const dateStr = `${partMap.year}-${partMap.month}-${partMap.day}`;
+      const hour = parseInt(partMap.hour, 10);
+      return { dateStr, hour };
+    };
+
+    const getSlotRangeLabel = (slot) => {
+      if (slot === 'Morning') return 'Morning (6:00 AM - 12:00 PM)';
+      if (slot === 'Afternoon') return 'Afternoon (12:00 PM - 4:00 PM)';
+      if (slot === 'Evening') return 'Evening (4:00 PM - 7:00 PM)';
+      if (slot === 'Night') return 'Night (7:00 PM - 10:00 PM)';
+      return '';
+    };
+
+    const getSlotName = (hr) => {
+      if (hr >= 6 && hr < 12) return 'Morning';
+      if (hr >= 12 && hr < 16) return 'Afternoon';
+      if (hr >= 16 && hr < 19) return 'Evening';
+      if (hr >= 19 && hr < 22) return 'Night';
+      return 'Restricted Hours';
+    };
+
+    const { dateStr: currentISTDate, hour: currentHour } = getISTDateTime();
+    const currentSlot = getSlotName(currentHour);
+
+    let isLeaveValidNow = false;
+    let isLeaveFuture = false;
+    let isLeaveExpired = false;
+    let leaveMessage = '';
+
     if (stud.activeLeave && stud.activeLeave.status === 'Approved') {
       const leave = stud.activeLeave;
-      const getISTDateTime = () => {
-        const now = new Date();
-        const formatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'Asia/Kolkata',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          hour12: false
-        });
-        const parts = formatter.formatToParts(now);
-        const partMap = {};
-        parts.forEach(p => { partMap[p.type] = p.value; });
-        const dateStr = `${partMap.year}-${partMap.month}-${partMap.day}`;
-        const hour = parseInt(partMap.hour, 10);
-        return { dateStr, hour };
-      };
-
-      const getSlotRangeLabel = (slot) => {
-        if (slot === 'Morning') return 'Morning (6:00 AM - 12:00 PM)';
-        if (slot === 'Afternoon') return 'Afternoon (12:00 PM - 4:00 PM)';
-        if (slot === 'Evening') return 'Evening (4:00 PM - 7:00 PM)';
-        if (slot === 'Night') return 'Night (7:00 PM - 10:00 PM)';
-        return '';
-      };
-
-      const getSlotName = (hr) => {
-        if (hr >= 6 && hr < 12) return 'Morning';
-        if (hr >= 12 && hr < 16) return 'Afternoon';
-        if (hr >= 16 && hr < 19) return 'Evening';
-        if (hr >= 19 && hr < 22) return 'Night';
-        return 'Restricted Hours';
-      };
-
-      const { dateStr: currentISTDate, hour: currentHour } = getISTDateTime();
       const scheduledStartDate = new Date(leave.fromDate).toISOString().split('T')[0];
-      const fromDateStr = new Date(leave.fromDate).toLocaleDateString('en-IN');
+      
+      const fromDateObj = new Date(leave.fromDate);
+      const day = String(fromDateObj.getDate()).padStart(2, '0');
+      const month = String(fromDateObj.getMonth() + 1).padStart(2, '0');
+      const year = fromDateObj.getFullYear();
+      const fromDateStr = `${day}/${month}/${year}`;
+      
       const expectedSlot = leave.outTimeSeason || 'Morning';
       const rangeLabel = getSlotRangeLabel(expectedSlot);
+      const shiftLabel = `${expectedSlot} Shift`;
 
-      if (currentISTDate !== scheduledStartDate) {
-        return {
-          type: 'NativeLeave',
-          label: currentISTDate < scheduledStartDate
-            ? `Your approved leave is scheduled for tomorrow/future (${fromDateStr}) during the ${expectedSlot} slot. You cannot check out early today.`
-            : `Your approved leave start date (${fromDateStr}) has expired. Please contact the warden.`,
-          reason: leave.reason,
-          valid: false
-        };
+      if (currentISTDate === scheduledStartDate) {
+        if (currentSlot === expectedSlot) {
+          isLeaveValidNow = true;
+        } else {
+          const slotOrder = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Night': 4, 'Restricted Hours': 5 };
+          if (slotOrder[expectedSlot] > slotOrder[currentSlot]) {
+            isLeaveFuture = true;
+            leaveMessage = `You have an approved Native Leave for today (${fromDateStr}) during the ${shiftLabel} (${rangeLabel}). You can check out only at your scheduled leave time.`;
+          } else {
+            isLeaveExpired = true;
+            leaveMessage = `Your approved Native Leave scheduled for today's ${shiftLabel} has expired. Please contact the warden.`;
+          }
+        }
+      } else if (currentISTDate < scheduledStartDate) {
+        isLeaveFuture = true;
+        leaveMessage = `You have an approved Native Leave for ${fromDateStr} (${shiftLabel}). You can check out only at your scheduled leave time.`;
+      } else {
+        isLeaveExpired = true;
+        leaveMessage = `Your approved Native Leave start date (${fromDateStr}) has expired. Please contact the warden.`;
       }
 
-      const currentSlot = getSlotName(currentHour);
-      if (currentSlot !== expectedSlot) {
+      if (isLeaveValidNow) {
         return {
           type: 'NativeLeave',
-          label: currentSlot === 'Restricted Hours'
-            ? `Your departure slot is ${expectedSlot} (${rangeLabel}). You cannot check out during Restricted Hours.`
-            : `Your departure slot is ${expectedSlot} (${rangeLabel}). You cannot check out during ${currentSlot}.`,
+          label: `🏠 Approved Native Leave (${expectedSlot} Slot) (Warden: ${leave.wardenName})`,
           reason: leave.reason,
-          valid: false
+          valid: true
         };
       }
-
-      return {
-        type: 'NativeLeave',
-        label: `🏠 Approved Native Leave (${expectedSlot} Slot) (Warden: ${leave.wardenName})`,
-        reason: leave.reason,
-        valid: true
-      };
     }
+
+    let isStaffPermissionValidNow = false;
+    let isStaffPermissionFuture = false;
+    let isStaffPermissionExpired = false;
+    let staffPermissionMessage = '';
 
     if (stud.activeStaffPermission && stud.activeStaffPermission.status === 'Approved') {
-      return {
-        type: 'StaffPermission',
-        label: `👤 Approved Staff Permission (Staff: ${stud.activeStaffPermission.staffName})`,
-        reason: stud.activeStaffPermission.reason,
-        valid: true
-      };
+      const perm = stud.activeStaffPermission;
+      const now = new Date();
+      const startTime = new Date(perm.permissionStartTime);
+      const endTime = new Date(perm.permissionEndTime);
+
+      if (now >= startTime && now <= endTime) {
+        isStaffPermissionValidNow = true;
+      } else if (now < startTime) {
+        isStaffPermissionFuture = true;
+        const startStr = startTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        
+        const startDateObj = startTime;
+        const startDay = String(startDateObj.getDate()).padStart(2, '0');
+        const startMonth = String(startDateObj.getMonth() + 1).padStart(2, '0');
+        const startYear = startDateObj.getFullYear();
+        const startDateStr = `${startDay}/${startMonth}/${startYear}`;
+        
+        staffPermissionMessage = `You have an approved Staff Permission for ${startDateStr} at ${startStr}. You can check out only at your scheduled permission time.`;
+      } else {
+        isStaffPermissionExpired = true;
+        staffPermissionMessage = `Your approved Staff Permission has expired. Please contact the warden.`;
+      }
+
+      if (isStaffPermissionValidNow) {
+        return {
+          type: 'StaffPermission',
+          label: `👤 Approved Staff Permission (Staff: ${perm.staffName})`,
+          reason: perm.reason,
+          valid: true
+        };
+      }
     }
 
+    // 3. Fallback check for regular scheduled outing times
     const scheduled = checkScheduledOuting();
     if (scheduled) {
       return {
@@ -153,9 +198,46 @@ const StudentMovement = () => {
       };
     }
 
+    // 4. If nothing is valid now, return detailed warning message
+    if (isLeaveFuture) {
+      return {
+        type: 'NativeLeave',
+        label: `${leaveMessage}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
+        reason: stud.activeLeave.reason,
+        valid: false
+      };
+    }
+
+    if (isStaffPermissionFuture) {
+      return {
+        type: 'StaffPermission',
+        label: `${staffPermissionMessage}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
+        reason: stud.activeStaffPermission.reason,
+        valid: false
+      };
+    }
+
+    if (isLeaveExpired) {
+      return {
+        type: 'NativeLeave',
+        label: `${leaveMessage}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
+        reason: stud.activeLeave.reason,
+        valid: false
+      };
+    }
+
+    if (isStaffPermissionExpired) {
+      return {
+        type: 'StaffPermission',
+        label: `${staffPermissionMessage}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
+        reason: stud.activeStaffPermission.reason,
+        valid: false
+      };
+    }
+
     return {
       type: null,
-      label: 'No active approved leaves, permissions, or scheduled outing times found.',
+      label: `No active approved leaves, permissions, or scheduled outing times found.\n\nYou can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
       valid: false
     };
   };
@@ -287,7 +369,7 @@ const StudentMovement = () => {
                         <p className="text-red-400 text-sm font-semibold flex items-center gap-1.5">
                           <FiAlertCircle className="w-4 h-4" /> Checkout Locked
                         </p>
-                        <p className="text-gray-300 text-xs">{detectedOuting?.label}</p>
+                        <p className="text-gray-300 text-xs whitespace-pre-line">{detectedOuting?.label}</p>
                       </div>
                     )}
 

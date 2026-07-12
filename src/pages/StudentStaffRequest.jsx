@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import StudentDashboardLayout from '../layouts/StudentDashboardLayout';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Badge from '../components/common/Badge';
-import { getMyPermissions, grantStaffPermission } from '../services/permissionService';
+import { getMyPermissions, grantStaffPermission, editStaffPermission, cancelStaffPermission } from '../services/permissionService';
 import { useAuth } from '../context/AuthContext';
 
 const StudentStaffRequest = () => {
@@ -20,6 +20,39 @@ const StudentStaffRequest = () => {
   const [toTime, setToTime] = useState('');
   const [staffName, setStaffName] = useState('');
   const [reason, setReason] = useState('');
+  const [editingPermissionId, setEditingPermissionId] = useState(null);
+
+  const handleStartEdit = (p) => {
+    setEditingPermissionId(p._id);
+    const dateVal = p.permissionStartTime ? new Date(p.permissionStartTime).toISOString().split('T')[0] : '';
+    const fromTimeVal = p.permissionStartTime ? new Date(p.permissionStartTime).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
+    const toTimeVal = p.permissionEndTime ? new Date(p.permissionEndTime).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
+    setPermissionDate(dateVal);
+    setFromTime(fromTimeVal);
+    setToTime(toTimeVal);
+    setStaffName(p.staffName);
+    setReason(p.reason);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPermissionId(null);
+    setPermissionDate('');
+    setFromTime('');
+    setToTime('');
+    setStaffName('');
+    setReason('');
+  };
+
+  const handleCancelRequest = async (id) => {
+    if (!window.confirm('Are you sure you want to cancel this permission request?')) return;
+    try {
+      await cancelStaffPermission(id);
+      toast.success('Permission request cancelled successfully');
+      fetchHistory();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel permission request');
+    }
+  };
 
   const fetchHistory = async () => {
     try {
@@ -49,15 +82,27 @@ const StudentStaffRequest = () => {
 
     setSubmitting(true);
     try {
-      await grantStaffPermission({
-        registerNumber: user.registerNumber,
-        permissionDate,
-        fromTime,
-        toTime,
-        staffName,
-        reason
-      });
-      toast.success('Staff Permission request submitted successfully!');
+      if (editingPermissionId) {
+        await editStaffPermission(editingPermissionId, {
+          permissionDate,
+          fromTime,
+          toTime,
+          staffName,
+          reason
+        });
+        toast.success('Staff Permission request updated successfully! Re-approval required.');
+        setEditingPermissionId(null);
+      } else {
+        await grantStaffPermission({
+          registerNumber: user.registerNumber,
+          permissionDate,
+          fromTime,
+          toTime,
+          staffName,
+          reason
+        });
+        toast.success('Staff Permission request submitted successfully!');
+      }
       // Reset form
       setPermissionDate('');
       setFromTime('');
@@ -66,7 +111,7 @@ const StudentStaffRequest = () => {
       setReason('');
       fetchHistory();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to request permission');
+      toast.error(err.response?.data?.message || 'Failed to process request');
     } finally {
       setSubmitting(false);
     }
@@ -152,14 +197,25 @@ const StudentStaffRequest = () => {
                 </div>
               </div>
 
-              <motion.button
-                type="submit"
-                disabled={submitting}
-                whileTap={{ scale: 0.97 }}
-                className="btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-1.5 font-bold"
-              >
-                {submitting ? 'Submitting...' : 'Submit Request'}
-              </motion.button>
+              <div className="flex gap-2">
+                <motion.button
+                  type="submit"
+                  disabled={submitting}
+                  whileTap={{ scale: 0.97 }}
+                  className="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 font-bold"
+                >
+                  {submitting ? 'Processing...' : editingPermissionId ? 'Update Request' : 'Submit Request'}
+                </motion.button>
+                {editingPermissionId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="btn-secondary py-2.5 text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -181,6 +237,7 @@ const StudentStaffRequest = () => {
                       <th className="px-3 py-2 text-gray-400 font-semibold uppercase">Time Range</th>
                       <th className="px-3 py-2 text-gray-400 font-semibold uppercase">Reason</th>
                       <th className="px-3 py-2 text-gray-400 font-semibold uppercase">Status</th>
+                      <th className="px-3 py-2 text-gray-400 font-semibold uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800/50">
@@ -197,11 +254,31 @@ const StudentStaffRequest = () => {
                         <td className="px-3 py-2.5">
                           <Badge status={p.status} />
                         </td>
+                        <td className="px-3 py-2.5">
+                          {(p.status === 'Pending' || p.status === 'Approved') ? (
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleStartEdit(p)}
+                                className="px-2 py-1 bg-blue-500/20 border border-blue-500/30 hover:bg-blue-500/30 text-blue-400 rounded-lg font-semibold text-[10px] transition-all"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleCancelRequest(p._id)}
+                                className="px-2 py-1 bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-400 rounded-lg font-semibold text-[10px] transition-all"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 font-medium">-</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                     {permissions.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-500">No requests found</td>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">No requests found</td>
                       </tr>
                     )}
                   </tbody>

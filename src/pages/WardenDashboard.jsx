@@ -312,7 +312,15 @@ const WardenDashboard = () => {
                       <td className="px-4 py-2.5 font-mono text-blue-400 text-xs font-medium">{l.registerNumber}</td>
                       <td className="px-4 py-2.5 text-white text-sm">{l.studentName}</td>
                       <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">{new Date(l.fromDate).toLocaleDateString('en-IN')}</td>
-                      <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">{new Date(l.toDate).toLocaleDateString('en-IN')}</td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">
+                        {new Date(l.toDate).toLocaleDateString('en-IN')}{' '}
+                        {(() => {
+                          const diffDays = Math.round((new Date(l.toDate) - new Date(l.fromDate)) / (1000 * 60 * 60 * 24));
+                          const isLateDeparture = l.outTimeSeason === 'Evening' || l.outTimeSeason === 'Night';
+                          const days = Math.max(1, isLateDeparture ? diffDays - 1 : diffDays);
+                          return <span className="text-purple-400">({days}d)</span>;
+                        })()}
+                      </td>
                       <td className="px-4 py-2.5 text-gray-400 text-xs max-w-[120px] truncate">{l.reason}</td>
                       <td className="px-4 py-2.5 text-xs">
                         <div className="flex gap-2">

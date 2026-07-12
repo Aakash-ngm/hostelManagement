@@ -103,7 +103,9 @@ const LeavesPage = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-800/50">
                   {leaves.map((l, i) => {
-                    const days = Math.ceil((new Date(l.toDate) - new Date(l.fromDate)) / (1000 * 60 * 60 * 24)) + 1;
+                    const diffDays = Math.round((new Date(l.toDate) - new Date(l.fromDate)) / (1000 * 60 * 60 * 24));
+                    const isLateDeparture = l.outTimeSeason === 'Evening' || l.outTimeSeason === 'Night';
+                    const days = Math.max(1, isLateDeparture ? diffDays - 1 : diffDays);
                     return (
                       <motion.tr
                         key={l._id}

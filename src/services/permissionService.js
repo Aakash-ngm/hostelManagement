@@ -10,3 +10,6 @@ export const approveStaffPermission = (id) => api.post(`/permission/approve-staf
 export const rejectStaffPermission = (id) => api.post(`/permission/reject-staff/${id}`);
 export const recordStaffPermissionOut = (data) => api.post('/permission/staff-out', data);
 export const getMyPermissions = () => api.get('/permission/student/my-permissions');
+export const editStaffPermission = (id, data) => api.put(`/permission/edit-staff/${id}`, data);
+export const cancelStaffPermission = (id) => api.post(`/permission/cancel-staff/${id}`);
+

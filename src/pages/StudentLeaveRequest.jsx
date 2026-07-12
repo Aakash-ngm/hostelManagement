@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import StudentDashboardLayout from '../layouts/StudentDashboardLayout';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Badge from '../components/common/Badge';
-import { getMyLeaves, applyLeave } from '../services/leaveService';
+import { getMyLeaves, applyLeave, editLeave, cancelLeave } from '../services/leaveService';
 import { getWardens } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,7 +21,53 @@ const StudentLeaveRequest = () => {
   const [toDate, setToDate] = useState('');
   const [selectedWardenId, setSelectedWardenId] = useState('');
   const [outTimeSeason, setOutTimeSeason] = useState('Morning');
+  const [inTimeSeason, setInTimeSeason] = useState('Night');
   const [reason, setReason] = useState('');
+  const [editingLeaveId, setEditingLeaveId] = useState(null);
+
+  const handleStartEdit = (l) => {
+    setEditingLeaveId(l._id);
+    setFromDate(new Date(l.fromDate).toISOString().split('T')[0]);
+    setToDate(new Date(l.toDate).toISOString().split('T')[0]);
+    setSelectedWardenId(l.wardenId);
+    setOutTimeSeason(l.outTimeSeason || 'Morning');
+    setInTimeSeason(l.inTimeSeason || 'Night');
+    setReason(l.reason);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLeaveId(null);
+    setFromDate('');
+    setToDate('');
+    setSelectedWardenId('');
+    setOutTimeSeason('Morning');
+    setInTimeSeason('Night');
+    setReason('');
+  };
+
+  const handleCancelRequest = async (id) => {
+    if (!window.confirm('Are you sure you want to cancel this leave request?')) return;
+    try {
+      await cancelLeave(id);
+      toast.success('Leave request cancelled successfully');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel leave request');
+    }
+  };
+
+  const calculateLiveDuration = () => {
+    if (!fromDate || !toDate) return null;
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    if (to < from) return null;
+    const diffDays = Math.round((to - from) / (1000 * 60 * 60 * 24));
+    const isLateDeparture = outTimeSeason === 'Evening' || outTimeSeason === 'Night';
+    const days = Math.max(1, isLateDeparture ? diffDays - 1 : diffDays);
+    return days;
+  };
+
+  const liveDays = calculateLiveDuration();
 
   const fetchData = async () => {
     try {
@@ -51,24 +97,39 @@ const StudentLeaveRequest = () => {
 
     setSubmitting(true);
     try {
-      await applyLeave({
-        registerNumber: user.registerNumber,
-        fromDate,
-        toDate,
-        reason,
-        wardenId: selectedWardenId,
-        outTimeSeason
-      });
-      toast.success('Native Leave request submitted successfully!');
+      if (editingLeaveId) {
+        await editLeave(editingLeaveId, {
+          fromDate,
+          toDate,
+          reason,
+          wardenId: selectedWardenId,
+          outTimeSeason,
+          inTimeSeason
+        });
+        toast.success('Native Leave request updated successfully! Re-approval required.');
+        setEditingLeaveId(null);
+      } else {
+        await applyLeave({
+          registerNumber: user.registerNumber,
+          fromDate,
+          toDate,
+          reason,
+          wardenId: selectedWardenId,
+          outTimeSeason,
+          inTimeSeason
+        });
+        toast.success('Native Leave request submitted successfully!');
+      }
       // Reset form
       setFromDate('');
       setToDate('');
       setSelectedWardenId('');
       setOutTimeSeason('Morning');
+      setInTimeSeason('Night');
       setReason('');
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to submit leave request');
+      toast.error(err.response?.data?.message || 'Failed to process leave request');
     } finally {
       setSubmitting(false);
     }
@@ -119,19 +180,38 @@ const StudentLeaveRequest = () => {
                 />
               </div>
 
-              <div>
-                <label className="form-label text-xs">Departure Slot</label>
-                <select
-                  required
-                  value={outTimeSeason}
-                  onChange={e => setOutTimeSeason(e.target.value)}
-                  className="input-field bg-gray-900 border border-gray-700/50 text-white rounded-xl w-full p-2.5 text-sm"
-                >
-                  <option value="Morning">Morning (06:00 AM - 12:00 PM)</option>
-                  <option value="Afternoon">Afternoon (12:00 PM - 04:00 PM)</option>
-                  <option value="Evening">Evening (04:00 PM - 07:00 PM)</option>
-                  <option value="Night">Night (07:00 PM - 10:00 PM)</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label text-xs">Departure Slot</label>
+                  <select
+                    required
+                    value={outTimeSeason}
+                    onChange={e => {
+                      setOutTimeSeason(e.target.value);
+                      setInTimeSeason(e.target.value);
+                    }}
+                    className="input-field bg-gray-900 border border-gray-700/50 text-white rounded-xl w-full p-2.5 text-sm"
+                  >
+                    <option value="Morning">Morning (06:00 AM - 12:00 PM)</option>
+                    <option value="Afternoon">Afternoon (12:00 PM - 04:00 PM)</option>
+                    <option value="Evening">Evening (04:00 PM - 07:00 PM)</option>
+                    <option value="Night">Night (07:00 PM - 10:00 PM)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label text-xs">Return Slot</label>
+                  <select
+                    required
+                    value={inTimeSeason}
+                    onChange={e => setInTimeSeason(e.target.value)}
+                    className="input-field bg-gray-900 border border-gray-700/50 text-white rounded-xl w-full p-2.5 text-sm"
+                  >
+                    <option value="Morning">Morning (06:00 AM - 12:00 PM)</option>
+                    <option value="Afternoon">Afternoon (12:00 PM - 04:00 PM)</option>
+                    <option value="Evening">Evening (04:00 PM - 07:00 PM)</option>
+                    <option value="Night">Night (07:00 PM - 10:00 PM)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -157,14 +237,31 @@ const StudentLeaveRequest = () => {
                 </div>
               </div>
 
-              <motion.button
-                type="submit"
-                disabled={submitting}
-                whileTap={{ scale: 0.97 }}
-                className="btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-1.5 font-bold"
-              >
-                {submitting ? 'Submitting...' : 'Submit Request'}
-              </motion.button>
+              {liveDays !== null && (
+                <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400 text-xs font-semibold text-center">
+                  Estimated Leave Duration: {liveDays} {liveDays === 1 ? 'day' : 'days'} ({outTimeSeason} Departure)
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <motion.button
+                  type="submit"
+                  disabled={submitting}
+                  whileTap={{ scale: 0.97 }}
+                  className="btn-primary flex-1 py-2.5 text-xs flex items-center justify-center gap-1.5 font-bold"
+                >
+                  {submitting ? 'Processing...' : editingLeaveId ? 'Update Request' : 'Submit Request'}
+                </motion.button>
+                {editingLeaveId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="btn-secondary py-2.5 text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -186,6 +283,7 @@ const StudentLeaveRequest = () => {
                       <th className="px-3 py-2 text-gray-400 font-semibold uppercase">To Date</th>
                       <th className="px-3 py-2 text-gray-400 font-semibold uppercase">Reason</th>
                       <th className="px-3 py-2 text-gray-400 font-semibold uppercase">Status</th>
+                      <th className="px-3 py-2 text-gray-400 font-semibold uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800/50">
@@ -193,23 +291,50 @@ const StudentLeaveRequest = () => {
                       <tr key={l._id || idx} className="hover:bg-gray-800/30 transition-colors">
                         <td className="px-3 py-2.5 font-semibold text-white capitalize">
                           {l.wardenName}
-                          <span className="block text-[10px] text-gray-500 font-normal">Slot: {l.outTimeSeason || 'Morning'}</span>
+                          <span className="block text-[10px] text-gray-500 font-normal">Out: {l.outTimeSeason || 'Morning'}</span>
+                          <span className="block text-[10px] text-gray-500 font-normal">In: {l.inTimeSeason || 'Night'}</span>
                         </td>
                         <td className="px-3 py-2.5 text-gray-400 font-mono">
                           {new Date(l.fromDate).toLocaleDateString('en-IN')}
                         </td>
                         <td className="px-3 py-2.5 text-gray-400 font-mono">
-                          {new Date(l.toDate).toLocaleDateString('en-IN')}
+                          {new Date(l.toDate).toLocaleDateString('en-IN')}{' '}
+                          {(() => {
+                            const diffDays = Math.round((new Date(l.toDate) - new Date(l.fromDate)) / (1000 * 60 * 60 * 24));
+                            const isLateDeparture = l.outTimeSeason === 'Evening' || l.outTimeSeason === 'Night';
+                            const days = Math.max(1, isLateDeparture ? diffDays - 1 : diffDays);
+                            return <span className="text-purple-400">({days}d)</span>;
+                          })()}
                         </td>
                         <td className="px-3 py-2.5 text-gray-400 truncate max-w-[120px]">{l.reason}</td>
                         <td className="px-3 py-2.5">
                           <Badge status={l.status} />
                         </td>
+                        <td className="px-3 py-2.5">
+                          {(l.status === 'Pending' || l.status === 'Approved') ? (
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleStartEdit(l)}
+                                className="px-2 py-1 bg-blue-500/20 border border-blue-500/30 hover:bg-blue-500/30 text-blue-400 rounded-lg font-semibold text-[10px] transition-all"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleCancelRequest(l._id)}
+                                className="px-2 py-1 bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-400 rounded-lg font-semibold text-[10px] transition-all"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 font-medium">-</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                     {leaves.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-500">No requests found</td>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">No requests found</td>
                       </tr>
                     )}
                   </tbody>
