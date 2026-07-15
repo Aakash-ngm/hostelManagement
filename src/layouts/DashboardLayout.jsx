@@ -30,7 +30,7 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user?.role === 'admin-mess') return;
+    if (user?.role === 'admin-mess' || user?.email === 'warden@gmail.com') return;
     const fetchUnread = async () => {
       try {
         const res = await getNotifications({ limit: 1 });
@@ -66,6 +66,12 @@ const DashboardLayout = ({ children }) => {
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems
           .filter(({ roles }) => !roles || roles.includes(user?.role))
+          .filter(({ to }) => {
+            if (user?.email === 'warden@gmail.com') {
+              return to === '/warden/dashboard';
+            }
+            return true;
+          })
           .map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}

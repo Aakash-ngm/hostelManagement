@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiUsers, FiHome, FiLogOut, FiAlertTriangle,
-  FiClock, FiCalendar, FiLogIn, FiTrendingUp, FiBell, FiRefreshCw
+  FiClock, FiCalendar, FiLogIn, FiTrendingUp, FiBell, FiRefreshCw, FiDownload
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -11,6 +11,8 @@ import LiveStatusTable from '../components/tables/LiveStatusTable';
 import { DailyAttendanceChart, WeeklyTrendChart, StatusPieChart } from '../components/charts/AttendanceChart';
 import { useDashboard } from '../hooks/useDashboard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import Badge from '../components/common/Badge';
+import * as XLSX from 'xlsx';
 import { getPendingLeaves, approveLeave, rejectLeave } from '../services/leaveService';
 import { getEmergencyHistory, getPendingPermissions, approveStaffPermission, rejectStaffPermission } from '../services/permissionService';
 import { exportReport } from '../services/reportService';
@@ -28,6 +30,11 @@ const WardenDashboard = () => {
   const [lateFilter, setLateFilter] = useState('today');
   const [pendingLeaves, setPendingLeaves] = useState([]);
   const [pendingStaffPermissions, setPendingStaffPermissions] = useState([]);
+
+  // Custom states for warden@gmail.com
+  const [selectedYear, setSelectedYear] = useState('All');
+  const [officeSearch, setOfficeSearch] = useState('');
+  const [officeStatusFilter, setOfficeStatusFilter] = useState('All');
 
   // Emergency States
   const [emergencyFilter, setEmergencyFilter] = useState('today');
@@ -78,6 +85,250 @@ const WardenDashboard = () => {
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
           <LoadingSpinner size="lg" text="Loading dashboard..." />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const isOfficeWarden = user?.email === 'warden@gmail.com';
+
+  // Render for Office Warden (warden@gmail.com)
+  if (isOfficeWarden) {
+    const yearStudents = selectedYear === 'All' ? liveStatus : liveStatus.filter(s => s.year === selectedYear);
+    const totalInYear = yearStudents.length;
+    const insideInYear = yearStudents.filter(s => s.currentStatus === 'Inside').length;
+    const outsideInYear = yearStudents.filter(s => s.currentStatus === 'Outside').length;
+    const permissionInYear = yearStudents.filter(s => s.currentStatus === 'Permission').length;
+    const nativeLeaveInYear = yearStudents.filter(s => s.currentStatus === 'NativeLeave').length;
+
+    const officeFilteredStudents = liveStatus.filter(s => {
+      if (selectedYear !== 'All' && s.year !== selectedYear) return false;
+      if (officeStatusFilter !== 'All' && s.currentStatus !== officeStatusFilter) return false;
+      if (officeSearch) {
+        const q = officeSearch.toLowerCase();
+        return (
+          s.name.toLowerCase().includes(q) ||
+          s.registerNumber.toLowerCase().includes(q) ||
+          s.roomNumber.toLowerCase().includes(q) ||
+          s.department.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+
+    const handleExportExcel = () => {
+      if (officeFilteredStudents.length === 0) {
+        return toast.error('No student data to export');
+      }
+
+      const dataToExport = officeFilteredStudents.map(student => ({
+        'Register Number': student.registerNumber,
+        'Name': student.name,
+        'Year': student.year,
+        'Room Number': student.roomNumber,
+        'Department': student.department,
+        'Phone': student.studentPhone || '-',
+        'Status': student.currentStatus
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+      
+      const fileName = selectedYear === 'All' 
+        ? 'Overall_Hostel_Students_Report.xlsx'
+        : `${selectedYear.replace(' ', '_')}_Hostel_Students_Report.xlsx`;
+
+      XLSX.writeFile(workbook, fileName);
+      toast.success('Excel report downloaded successfully!');
+    };
+
+    return (
+      <DashboardLayout>
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-white">Warden Office Dashboard</h1>
+              <p className="text-sm text-gray-400 mt-0.5">
+                {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+            <button
+              onClick={handleRefresh}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-800/60 border border-gray-700/50 text-gray-400 hover:text-white rounded-xl text-sm transition-all hover:bg-gray-700/60 w-full sm:w-auto"
+            >
+              <FiRefreshCw className="w-4 h-4" /> Refresh
+            </button>
+          </div>
+
+          {/* Year Tabs */}
+          <div className="flex flex-wrap gap-2 p-1.5 bg-gray-900 border border-gray-800/50 rounded-2xl max-w-2xl">
+            {['All', '1st Year', '2nd Year', '3rd Year', '4th Year'].map((yearOption) => (
+              <button
+                key={yearOption}
+                onClick={() => {
+                  setSelectedYear(yearOption);
+                  setOfficeStatusFilter('All');
+                }}
+                className={`flex-1 min-w-[80px] text-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  selectedYear === yearOption
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                {yearOption === 'All' ? 'Overall (All)' : yearOption}
+              </button>
+            ))}
+          </div>
+
+          {/* Key Stats for Selected Year */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <StatCard
+              icon={FiUsers}
+              label="Total Students"
+              value={totalInYear}
+              color="blue"
+              index={0}
+              onClick={() => setOfficeStatusFilter('All')}
+            />
+            <StatCard
+              icon={FiHome}
+              label="Inside"
+              value={insideInYear}
+              color="emerald"
+              index={1}
+              onClick={() => setOfficeStatusFilter('Inside')}
+            />
+            <StatCard
+              icon={FiLogOut}
+              label="Outside"
+              value={outsideInYear}
+              color="amber"
+              index={2}
+              onClick={() => setOfficeStatusFilter('Outside')}
+            />
+            <StatCard
+              icon={FiClock}
+              label="Permission"
+              value={permissionInYear}
+              color="cyan"
+              index={3}
+              onClick={() => setOfficeStatusFilter('Permission')}
+            />
+            <StatCard
+              icon={FiCalendar}
+              label="Native Leave"
+              value={nativeLeaveInYear}
+              color="purple"
+              index={4}
+              onClick={() => setOfficeStatusFilter('NativeLeave')}
+            />
+          </div>
+
+          {/* Students List section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass-card p-5 space-y-4"
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800/40 pb-4">
+              <div>
+                <h3 className="text-white font-semibold flex items-center gap-2 text-lg">
+                  {selectedYear === 'All' ? 'Overall Hostel' : selectedYear} Students
+                  <span className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+                    {officeFilteredStudents.length}
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">Currently filtered by: <span className="text-blue-400 font-semibold">{officeStatusFilter}</span></p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                {/* Search */}
+                <div className="relative flex-1 sm:w-64">
+                  <input
+                    type="text"
+                    value={officeSearch}
+                    onChange={(e) => setOfficeSearch(e.target.value)}
+                    placeholder="Search name, register no..."
+                    className="w-full pl-3 pr-8 py-2 bg-gray-950 border border-gray-800 focus:border-blue-500 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none"
+                  />
+                  {officeSearch && (
+                    <button
+                      onClick={() => setOfficeSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+
+                {/* Status selector */}
+                <select
+                  value={officeStatusFilter}
+                  onChange={(e) => setOfficeStatusFilter(e.target.value)}
+                  className="px-3 py-2 bg-gray-950 border border-gray-800 rounded-xl text-xs text-white focus:outline-none flex-1 sm:flex-initial"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Inside">Inside</option>
+                  <option value="Outside">Outside</option>
+                  <option value="Permission">Permission</option>
+                  <option value="NativeLeave">Native Leave</option>
+                </select>
+
+                {/* Excel Export Button */}
+                <button
+                  onClick={handleExportExcel}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/20 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/20"
+                >
+                  <FiDownload className="w-3.5 h-3.5" /> Export Excel
+                </button>
+              </div>
+            </div>
+
+            {/* Students Table */}
+            <div className="overflow-auto rounded-xl border border-gray-800/50">
+              <table className="w-full text-sm min-w-[700px]">
+                <thead>
+                  <tr className="bg-gray-800/80">
+                    <th className="px-4 py-3 text-left text-xs text-gray-400 font-semibold uppercase tracking-wider">Register No.</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-400 font-semibold uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-400 font-semibold uppercase tracking-wider">Room</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-400 font-semibold uppercase tracking-wider">Department</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-400 font-semibold uppercase tracking-wider">Phone</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-400 font-semibold uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800/50">
+                  {officeFilteredStudents.map((s) => (
+                    <tr key={s._id} className="hover:bg-gray-800/30 transition-colors">
+                      <td className="px-4 py-3 font-mono text-blue-400 text-xs font-medium">{s.registerNumber}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {s.name.charAt(0)}
+                          </div>
+                          <span className="text-white text-sm font-medium">{s.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-300 text-xs font-mono">{s.roomNumber}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{s.department}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs font-mono">{s.studentPhone || '-'}</td>
+                      <td className="px-4 py-3 text-xs">
+                        <Badge status={s.currentStatus} />
+                      </td>
+                    </tr>
+                  ))}
+                  {officeFilteredStudents.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-gray-500 text-xs">No matching students found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
         </div>
       </DashboardLayout>
     );

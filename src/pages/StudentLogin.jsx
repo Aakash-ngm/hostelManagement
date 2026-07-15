@@ -23,7 +23,13 @@ const StudentLogin = () => {
       toast.success(`Welcome, ${res.data.data.user.name}!`);
       navigate('/student/dashboard');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Login failed');
+      const responseData = err.response?.data;
+      if (responseData?.errors && responseData.errors.length > 0) {
+        const errorDetails = responseData.errors.map(e => e.message).join(', ');
+        toast.error(`${responseData.message || 'Login failed'}: ${errorDetails}`);
+      } else {
+        toast.error(responseData?.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }

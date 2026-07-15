@@ -23,7 +23,13 @@ const WardenRegister = () => {
       toast.success('Account created successfully!');
       navigate('/warden/dashboard');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed');
+      const responseData = err.response?.data;
+      if (responseData?.errors && responseData.errors.length > 0) {
+        const errorDetails = responseData.errors.map(e => e.message).join(', ');
+        toast.error(`${responseData.message}: ${errorDetails}`);
+      } else {
+        toast.error(responseData?.message || 'Registration failed');
+      }
     } finally {
       setLoading(false);
     }

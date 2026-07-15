@@ -11,7 +11,7 @@ import { getAllStudents, addStudent, updateStudent, deleteStudent } from '../ser
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 const DEPTS = ['CSE', 'ECE', 'EEE', 'MECH', 'CIVIL', 'IT', 'AIDS', 'AIML', 'Other'];
 
-const emptyForm = { name: '', registerNumber: '', email: '', password: 'Student@123', department: 'CSE', year: '1st Year', roomNumber: '', studentPhone: '', parentPhone: '' };
+const emptyForm = { name: '', registerNumber: '', email: '', password: 'student@123', department: 'CSE', year: '1st Year', roomNumber: '', studentPhone: '', parentPhone: '' };
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
@@ -57,7 +57,11 @@ const StudentManagement = () => {
     setSaving(true);
     try {
       if (editStudent) {
-        await updateStudent(editStudent._id, form);
+        const payload = { ...form };
+        if (!payload.password || payload.password.trim() === '') {
+          delete payload.password;
+        }
+        await updateStudent(editStudent._id, payload);
         toast.success('Student updated!');
       } else {
         await addStudent(form);
@@ -201,7 +205,18 @@ const StudentManagement = () => {
                 <div><label className="form-label">Year</label><select required value={form.year} onChange={set('year')} className="input-field">{YEARS.map(y => <option key={y}>{y}</option>)}</select></div>
                 <div><label className="form-label">Student Phone</label><input type="tel" required value={form.studentPhone} onChange={set('studentPhone')} maxLength={10} placeholder="9876543210" className="input-field" /></div>
                 <div><label className="form-label">Parent Phone</label><input type="tel" required value={form.parentPhone} onChange={set('parentPhone')} maxLength={10} placeholder="9876543210" className="input-field" /></div>
-                {!editStudent && <div className="col-span-1 sm:col-span-2"><label className="form-label">Default Password</label><input value={form.password} onChange={set('password')} placeholder="Student@123" className="input-field" /></div>}
+                {!editStudent && (
+                  <div className="col-span-1 sm:col-span-2">
+                    <label className="form-label">Password</label>
+                    <input 
+                      type="text" 
+                      value={form.password || ''} 
+                      onChange={set('password')} 
+                      placeholder="student@123" 
+                      className="input-field" 
+                    />
+                  </div>
+                )}
                 <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row gap-3 mt-2">
                   <button type="button" onClick={() => setShowModal(false)} className="btn-secondary w-full sm:flex-1">Cancel</button>
                   <button type="submit" disabled={saving} className="btn-primary w-full sm:flex-1 flex items-center justify-center gap-2">
