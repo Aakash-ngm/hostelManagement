@@ -199,38 +199,21 @@ const StudentMovement = () => {
     }
 
     // 4. If nothing is valid now, return detailed warning message
-    if (isLeaveFuture) {
+    if (isLeaveFuture || isLeaveExpired || isStaffPermissionFuture || isStaffPermissionExpired) {
+      let labels = [];
+      let reasons = [];
+      if (isLeaveFuture || isLeaveExpired) {
+        labels.push(leaveMessage);
+        reasons.push(stud.activeLeave.reason);
+      }
+      if (isStaffPermissionFuture || isStaffPermissionExpired) {
+        labels.push(staffPermissionMessage);
+        reasons.push(stud.activeStaffPermission.reason);
+      }
       return {
-        type: 'NativeLeave',
-        label: `${leaveMessage}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
-        reason: stud.activeLeave.reason,
-        valid: false
-      };
-    }
-
-    if (isStaffPermissionFuture) {
-      return {
-        type: 'StaffPermission',
-        label: `${staffPermissionMessage}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
-        reason: stud.activeStaffPermission.reason,
-        valid: false
-      };
-    }
-
-    if (isLeaveExpired) {
-      return {
-        type: 'NativeLeave',
-        label: `${leaveMessage}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
-        reason: stud.activeLeave.reason,
-        valid: false
-      };
-    }
-
-    if (isStaffPermissionExpired) {
-      return {
-        type: 'StaffPermission',
-        label: `${staffPermissionMessage}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
-        reason: stud.activeStaffPermission.reason,
+        type: 'CombinedWarning',
+        label: `${labels.join('\n\n')}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
+        reason: reasons.join(' / '),
         valid: false
       };
     }

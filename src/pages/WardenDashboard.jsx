@@ -562,7 +562,10 @@ const WardenDashboard = () => {
                     <tr key={l._id} className="hover:bg-gray-800/30 transition-colors">
                       <td className="px-4 py-2.5 font-mono text-blue-400 text-xs font-medium">{l.registerNumber}</td>
                       <td className="px-4 py-2.5 text-white text-sm">{l.studentName}</td>
-                      <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">{new Date(l.fromDate).toLocaleDateString('en-IN')}</td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">
+                        {new Date(l.fromDate).toLocaleDateString('en-IN')}
+                        <span className="block text-[10px] text-purple-400 font-semibold mt-0.5 capitalize">{l.outTimeSeason || 'Morning'}</span>
+                      </td>
                       <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">
                         {new Date(l.toDate).toLocaleDateString('en-IN')}{' '}
                         {(() => {
@@ -571,6 +574,7 @@ const WardenDashboard = () => {
                           const days = Math.max(1, isLateDeparture ? diffDays - 1 : diffDays);
                           return <span className="text-purple-400">({days}d)</span>;
                         })()}
+                        <span className="block text-[10px] text-purple-400 font-semibold mt-0.5 capitalize">{l.inTimeSeason || 'Night'}</span>
                       </td>
                       <td className="px-4 py-2.5 text-gray-400 text-xs max-w-[120px] truncate">{l.reason}</td>
                       <td className="px-4 py-2.5 text-xs">

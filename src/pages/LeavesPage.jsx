@@ -130,6 +130,7 @@ const LeavesPage = () => {
                         <td className="px-4 py-3 text-gray-400 text-xs font-mono">
                           {new Date(l.toDate).toLocaleDateString('en-IN')}{' '}
                           <span className="text-purple-400">({days}d)</span>
+                          <span className="block text-[10px] text-purple-400 font-semibold mt-0.5 capitalize">{l.inTimeSeason || 'Night'}</span>
                         </td>
                         <td className="px-4 py-3">
                           <Badge status={l.status} />
