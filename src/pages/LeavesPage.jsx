@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiCalendar } from 'react-icons/fi';
+import { FiCalendar, FiRefreshCw, FiClock } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Badge from '../components/common/Badge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { getActiveLeaves, getAllLeaves, getPendingLeaves, approveLeave, rejectLeave } from '../services/leaveService';
+import { getActiveLeaves, getAllLeaves, getPendingLeaves, getUnusedLeaves, approveLeave, rejectLeave, revokeUnusedLeave, extendLeaveDate } from '../services/leaveService';
 
 const LeavesPage = () => {
   const [leaves, setLeaves] = useState([]);
@@ -20,6 +20,8 @@ const LeavesPage = () => {
         res = await getPendingLeaves();
       } else if (tab === 'active') {
         res = await getActiveLeaves();
+      } else if (tab === 'unused') {
+        res = await getUnusedLeaves();
       } else {
         res = await getAllLeaves();
       }
@@ -55,6 +57,31 @@ const LeavesPage = () => {
     }
   };
 
+  const handleRevokeUnused = async (id) => {
+    try {
+      await revokeUnusedLeave(id);
+      toast.success('Unused leave revoked and student gate status reset.');
+      fetchLeaves();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to revoke leave');
+    }
+  };
+
+  const handleExtendDate = async (id) => {
+    const newFrom = prompt('Enter new departure date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if (!newFrom) return;
+    const newTo = prompt('Enter new return date (YYYY-MM-DD):', newFrom);
+    if (!newTo) return;
+
+    try {
+      await extendLeaveDate(id, { fromDate: newFrom, toDate: newTo });
+      toast.success('Travel dates extended successfully!');
+      fetchLeaves();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to extend dates');
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto space-y-5">
@@ -65,7 +92,7 @@ const LeavesPage = () => {
           <p className="text-sm text-gray-400 mt-0.5">Student native leave records and approvals</p>
         </div>
         <div className="flex gap-2">
-          {['pending', 'active', 'all'].map((t) => (
+          {['pending', 'active', 'unused', 'all'].map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -75,7 +102,7 @@ const LeavesPage = () => {
                   : 'bg-gray-800/60 text-gray-400 border border-gray-700/50 hover:text-white'
               }`}
             >
-              {t}
+              {t === 'unused' ? 'Unused / Expired' : t}
             </button>
           ))}
         </div>
@@ -89,7 +116,7 @@ const LeavesPage = () => {
               <table className="w-full text-sm min-w-[700px]">
                 <thead>
                   <tr className="bg-gray-800/80">
-                    {['Register No.', 'Name', 'Department', 'Room', 'Reason', 'From', 'To', 'Status', tab === 'pending' && 'Actions']
+                    {['Register No.', 'Name', 'Department', 'Room', 'Reason', 'From', 'To', 'Status', (tab === 'pending' || tab === 'unused') && 'Actions']
                       .filter(Boolean)
                       .map((h) => (
                         <th
@@ -149,6 +176,24 @@ const LeavesPage = () => {
                                 className="px-2.5 py-1 bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-400 text-xs font-bold rounded-lg transition-all"
                               >
                                 Reject
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                        {tab === 'unused' && (
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleRevokeUnused(l._id)}
+                                className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/30 hover:bg-amber-500/30 text-amber-400 text-xs font-bold rounded-lg transition-all flex items-center gap-1"
+                              >
+                                <FiRefreshCw className="w-3 h-3" /> Revoke & Reset
+                              </button>
+                              <button
+                                onClick={() => handleExtendDate(l._id)}
+                                className="px-2.5 py-1 bg-blue-500/20 border border-blue-500/30 hover:bg-blue-500/30 text-blue-400 text-xs font-bold rounded-lg transition-all flex items-center gap-1"
+                              >
+                                <FiClock className="w-3 h-3" /> Extend Date
                               </button>
                             </div>
                           </td>

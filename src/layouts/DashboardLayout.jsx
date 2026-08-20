@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiGrid, FiUsers, FiClipboard, FiLogOut, FiMenu, FiX,
   FiSun, FiMoon, FiBell, FiChevronRight, FiShield,
-  FiFileText, FiHome, FiClock, FiCalendar
+  FiFileText, FiHome, FiClock, FiCalendar, FiCheckSquare
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -14,6 +14,7 @@ const navItems = [
   { to: '/warden/dashboard', icon: FiGrid, label: 'Dashboard', roles: ['warden'] },
   { to: '/admin/dashboard', icon: FiGrid, label: 'Dashboard', roles: ['admin-mess'] },
   { to: '/warden/students', icon: FiUsers, label: 'Students', roles: ['warden'] },
+  { to: '/warden/attendance', icon: FiCheckSquare, label: 'Roll-Call Attendance', roles: ['warden'] },
   { to: '/warden/live-status', icon: FiHome, label: 'Live Status', roles: ['warden'] },
   { to: '/warden/reports', icon: FiFileText, label: 'Reports', roles: ['warden'] },
   { to: '/admin/reports', icon: FiFileText, label: 'Reports', roles: ['admin-mess'] },

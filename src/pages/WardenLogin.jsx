@@ -33,11 +33,13 @@ const WardenLogin = () => {
       navigate('/warden/dashboard');
     } catch (err) {
       const responseData = err.response?.data;
-      if (responseData?.errors && responseData.errors.length > 0) {
+      if (!err.response) {
+        toast.error(`Cannot connect to server at port 5000 (${err.message}). Make sure server is running.`);
+      } else if (responseData?.errors && responseData.errors.length > 0) {
         const errorDetails = responseData.errors.map(e => e.message).join(', ');
         toast.error(`${responseData.message || 'Login failed'}: ${errorDetails}`);
       } else {
-        toast.error(responseData?.message || 'Login failed');
+        toast.error(responseData?.message || err.message || 'Login failed');
       }
     } finally {
       setLoading(false);
@@ -53,8 +55,8 @@ const WardenLogin = () => {
             type="email"
             required
             value={form.email}
-            onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-            placeholder="admin@hostelflow.com"
+            onChange={e => setForm(p => ({ ...p, email: e.target.value.trim().toLowerCase() }))}
+            placeholder="sathish@gmail.com"
             className="input-field"
           />
         </div>

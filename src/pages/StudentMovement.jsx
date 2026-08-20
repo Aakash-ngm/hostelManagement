@@ -15,6 +15,7 @@ const StudentMovement = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [selectedOutingType, setSelectedOutingType] = useState(null);
 
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const StudentMovement = () => {
     setStudent(null);
     setInStudent(null);
     setResult(null);
+    setSelectedOutingType(null);
   };
 
   const checkScheduledOuting = () => {
@@ -41,7 +43,7 @@ const StudentMovement = () => {
     const dinnerEnd = 21 * 60;         // 9:00 PM
 
     if (totalMinutes >= eveningStart && totalMinutes <= eveningEnd) {
-      return { type: 'EveningOuting', label: '🌆 Evening Outing (4:30 PM - 6:30 PM)' };
+      return { type: 'EveningOuting', label: '🌆 Regular Evening Outing (4:30 PM - 6:30 PM)' };
     }
     if (totalMinutes >= dinnerStart && totalMinutes <= dinnerEnd) {
       return { type: 'DinnerBreak', label: '🍽 Dinner Outing (8:00 PM - 9:00 PM)' };
@@ -190,11 +192,34 @@ const StudentMovement = () => {
     // 3. Fallback check for regular scheduled outing times
     const scheduled = checkScheduledOuting();
     if (scheduled) {
+      // If regular outing is valid, allow regular evening outing even if native leave was expired
       return {
         type: scheduled.type,
         label: scheduled.label,
         reason: 'Regular daily outing',
-        valid: true
+        valid: true,
+        hasUnusedLeave: isLeaveExpired || isLeaveFuture,
+        leaveWarning: isLeaveExpired ? leaveMessage : null
+      };
+    }
+
+    // 4. If nothing is valid now, return detailed warning message
+    if (isLeaveFuture || isLeaveExpired || isStaffPermissionFuture || isStaffPermissionExpired) {
+      let labels = [];
+      let reasons = [];
+      if (isLeaveFuture || isLeaveExpired) {
+        labels.push(leaveMessage);
+        reasons.push(stud.activeLeave.reason);
+      }
+      if (isStaffPermissionFuture || isStaffPermissionExpired) {
+        labels.push(staffPermissionMessage);
+        reasons.push(stud.activeStaffPermission.reason);
+      }
+      return {
+        type: 'CombinedWarning',
+        label: `${labels.join('\n\n')}\n\nUntil then, you can go outside only during:\n\nEvening Outing: 4:30 PM – 6:30 PM\nDinner Break: 8:00 PM – 9:00 PM`,
+        reason: reasons.join(' / '),
+        valid: false
       };
     }
 
@@ -225,16 +250,21 @@ const StudentMovement = () => {
     };
   };
 
-  const handleOut = async () => {
+  const handleOut = async (overrideType = null) => {
     if (!student) return toast.error('Search for a student first');
     const detection = detectOutingType(student);
-    if (!detection || !detection.valid) {
-      return toast.error('Checkout is locked. No valid outing type detected.');
+    const targetType = overrideType || selectedOutingType || detection?.type;
+
+    if (!detection || (!detection.valid && !targetType)) {
+      return toast.error('Checkout is locked. No valid outing type selected.');
     }
 
     setLoading(true);
     try {
-      const res = await recordOut({ registerNumber: student.registerNumber });
+      const res = await recordOut({ 
+        registerNumber: student.registerNumber,
+        outingType: targetType
+      });
       setResult({ type: 'success', data: res.data, alerts: res.data.alerts });
       toast.success(res.data.message);
     } catch (err) {
@@ -346,6 +376,13 @@ const StudentMovement = () => {
                         </p>
                         <p className="text-white text-xs font-semibold">{detectedOuting.label}</p>
                         <p className="text-gray-400 text-xs mt-0.5">Reason: <strong>{detectedOuting.reason}</strong></p>
+
+                        {detectedOuting.hasUnusedLeave && (
+                          <div className="mt-2 pt-2 border-t border-amber-500/20 text-amber-300 text-xs flex items-center gap-1.5">
+                            <FiAlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                            <span>Notice: Student's Native Leave start date passed without checkout. Recording checkout as <strong>Regular Outing</strong>.</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/5 space-y-2">
@@ -359,7 +396,7 @@ const StudentMovement = () => {
                     {detectedOuting && detectedOuting.valid && (
                       <motion.button
                         whileTap={{ scale: 0.97 }}
-                        onClick={handleOut}
+                        onClick={() => handleOut()}
                         disabled={loading}
                         className="btn-primary w-full py-3 rounded-xl font-semibold text-sm transition-all"
                       >

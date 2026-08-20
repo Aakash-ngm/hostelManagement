@@ -13,7 +13,7 @@ import { useDashboard } from '../hooks/useDashboard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Badge from '../components/common/Badge';
 import * as XLSX from 'xlsx';
-import { getPendingLeaves, approveLeave, rejectLeave } from '../services/leaveService';
+import { getPendingLeaves, getUnusedLeaves, revokeUnusedLeave, extendLeaveDate, approveLeave, rejectLeave } from '../services/leaveService';
 import { getEmergencyHistory, getPendingPermissions, approveStaffPermission, rejectStaffPermission } from '../services/permissionService';
 import { exportReport } from '../services/reportService';
 import { useAuth } from '../context/AuthContext';
@@ -29,6 +29,7 @@ const WardenDashboard = () => {
   const { stats, liveStatus, outside, chartData, loading, error, refetch } = useDashboard(30000);
   const [lateFilter, setLateFilter] = useState('today');
   const [pendingLeaves, setPendingLeaves] = useState([]);
+  const [unusedLeaves, setUnusedLeaves] = useState([]);
   const [pendingStaffPermissions, setPendingStaffPermissions] = useState([]);
 
   // Custom states for warden@gmail.com
@@ -45,6 +46,14 @@ const WardenDashboard = () => {
     try {
       const res = await getPendingLeaves();
       setPendingLeaves(res.data.data.leaves || []);
+    } catch {}
+  };
+
+  const fetchUnused = async () => {
+    if (user?.role === 'admin-mess') return;
+    try {
+      const res = await getUnusedLeaves();
+      setUnusedLeaves(res.data.data.leaves || []);
     } catch {}
   };
 
@@ -66,6 +75,7 @@ const WardenDashboard = () => {
 
   useEffect(() => {
     fetchPending();
+    fetchUnused();
     fetchPendingStaff();
   }, []);
 
@@ -76,8 +86,36 @@ const WardenDashboard = () => {
   const handleRefresh = async () => {
     await refetch();
     await fetchPending();
+    await fetchUnused();
     await fetchPendingStaff();
     await fetchEmergencyHistory();
+  };
+
+  const handleRevokeUnused = async (id) => {
+    try {
+      await revokeUnusedLeave(id);
+      toast.success('Unused leave revoked!');
+      fetchUnused();
+      refetch();
+    } catch {
+      toast.error('Failed to revoke leave');
+    }
+  };
+
+  const handleExtendDate = async (id) => {
+    const newFrom = prompt('Enter new departure date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    if (!newFrom) return;
+    const newTo = prompt('Enter new return date (YYYY-MM-DD):', newFrom);
+    if (!newTo) return;
+
+    try {
+      await extendLeaveDate(id, { fromDate: newFrom, toDate: newTo });
+      toast.success('Travel dates extended!');
+      fetchUnused();
+      refetch();
+    } catch {
+      toast.error('Failed to extend dates');
+    }
   };
 
   if (loading) {
@@ -525,6 +563,74 @@ const WardenDashboard = () => {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Unused Native Leaves Alert Panel */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-5 border border-amber-500/30 bg-amber-950/10"
+        >
+          <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <FiClock className="text-amber-400 w-4 h-4" />
+            Unused / Expired Travel Passes (Missed Departure)
+            <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold rounded-full">
+              {unusedLeaves.length}
+            </span>
+          </h3>
+          {unusedLeaves.length === 0 ? (
+            <div className="py-6 text-center text-gray-400 text-xs">
+              ✅ No unused or expired travel passes. All approved leaves are up to date!
+            </div>
+          ) : (
+            <div className="overflow-auto rounded-xl border border-gray-800/50">
+              <table className="w-full text-sm min-w-[620px]">
+                <thead>
+                  <tr className="bg-gray-800/80">
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Register No.</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Name</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Scheduled Date</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Reason</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Status</th>
+                    <th className="px-4 py-2.5 text-left text-xs text-gray-400 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800/50">
+                  {unusedLeaves.map(l => (
+                    <tr key={l._id} className="hover:bg-gray-800/30 transition-colors">
+                      <td className="px-4 py-2.5 font-mono text-blue-400 text-xs font-medium">{l.registerNumber}</td>
+                      <td className="px-4 py-2.5 text-white text-sm">{l.studentName}</td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs font-mono">
+                        {new Date(l.fromDate).toLocaleDateString('en-IN')} ({l.outTimeSeason || 'Morning'})
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs max-w-[150px] truncate">{l.reason}</td>
+                      <td className="px-4 py-2.5 text-xs">
+                        <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 rounded-lg text-xs font-semibold">
+                          Missed Departure
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-xs">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleRevokeUnused(l._id)}
+                            className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/30 hover:bg-amber-500/30 text-amber-400 text-xs font-bold rounded-lg transition-all"
+                          >
+                            Revoke & Reset
+                          </button>
+                          <button
+                            onClick={() => handleExtendDate(l._id)}
+                            className="px-2.5 py-1 bg-blue-500/20 border border-blue-500/30 hover:bg-blue-500/30 text-blue-400 text-xs font-bold rounded-lg transition-all"
+                          >
+                            Extend Date
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

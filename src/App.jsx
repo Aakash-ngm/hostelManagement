@@ -16,6 +16,7 @@ import WardenDashboard from './pages/WardenDashboard';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import StudentManagement from './pages/StudentManagement';
+import WardenAttendancePage from './pages/WardenAttendancePage';
 import LiveStatusPage from './pages/LiveStatusPage';
 import ReportsPage from './pages/ReportsPage';
 import PermissionsPage from './pages/PermissionsPage';
@@ -106,6 +107,9 @@ function App() {
             } />
             <Route path="/warden/students" element={
               <ProtectedWardenRoute><StudentManagement /></ProtectedWardenRoute>
+            } />
+            <Route path="/warden/attendance" element={
+              <ProtectedWardenRoute><WardenAttendancePage /></ProtectedWardenRoute>
             } />
 
             {/* Protected admin routes */}

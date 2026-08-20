@@ -10,4 +10,6 @@ export const recordLeaveOut = (data) => api.post('/leave/out', data);
 export const getMyLeaves = () => api.get('/leave/student/my-leaves');
 export const editLeave = (id, data) => api.put(`/leave/edit/${id}`, data);
 export const cancelLeave = (id) => api.post(`/leave/cancel/${id}`);
-
+export const getUnusedLeaves = () => api.get('/leave/unused');
+export const revokeUnusedLeave = (id) => api.post(`/leave/revoke-unused/${id}`);
+export const extendLeaveDate = (id, data) => api.post(`/leave/extend-date/${id}`, data);
